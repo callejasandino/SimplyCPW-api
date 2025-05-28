@@ -13,6 +13,10 @@ return new class extends Migration
     {
         Schema::create('dashboard_data', function (Blueprint $table) {
             $table->id();
+            $table->json('stats')->nullable();
+            $table->json('monthlyData')->nullable();
+            $table->json('serviceDistribution')->nullable();
+            $table->json('leadSources')->nullable();
             $table->timestamps();
         });
     }

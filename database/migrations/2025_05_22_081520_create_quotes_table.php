@@ -13,6 +13,15 @@ return new class extends Migration
     {
         Schema::create('quotes', function (Blueprint $table) {
             $table->id();
+            $table->string('firstName');
+            $table->string('lastName');
+            $table->string('email');
+            $table->string('phone');
+            $table->string('address');
+            $table->json('servicesNeeded');
+            $table->string('additionalInfo')->nullable();
+            $table->string('status')->default('Pending');
+            $table->boolean('agreedToTerms');
             $table->timestamps();
         });
     }
