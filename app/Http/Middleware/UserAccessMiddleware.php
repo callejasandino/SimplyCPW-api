@@ -17,14 +17,14 @@ class UserAccessMiddleware
     public function handle(Request $request, Closure $next, ...$roles): Response
     {
         $user = Auth::user();
-        return $next($request);
-        // if (!$user) {
-        //     return response()->json(['message' => 'Unauthorized'], 401);
-        // }
+       
+        if (!$user) {
+            return response()->json(['message' => 'Unauthorized'], 401);
+        }
 
-        // if (in_array($user->role, $roles)) {
-        //     return $next($request);
-        // }
+        if (in_array($user->userRole->role->name, $roles)) {
+            return $next($request);
+        }
 
         return response()->json(['message' => 'Forbidden - Insufficient Permissions'], 403);
     }

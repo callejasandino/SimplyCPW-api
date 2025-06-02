@@ -23,7 +23,7 @@ class MemberController extends Controller
             'contact_number' => 'required|string|max:255',
         ]);
 
-        $imageUrl = $this->uploadImage($request->file('image'), $member);
+        $imageUrl = $this->uploadImage($request->file('image'), null);
 
         $member = Member::create([
             'name' => $validated['name'],

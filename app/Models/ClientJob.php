@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class ClientJob extends Model
 {
     protected $fillable = [
+        'slug',
         'title',
         'client',
         'date',

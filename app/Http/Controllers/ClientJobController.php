@@ -4,20 +4,26 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\ClientJob;
+use App\Models\Equipment;
+use App\Models\Member;
+use App\Models\Service;
+
 class ClientJobController extends Controller
 {
     public function index()
     {
         $perPage = request()->query('per_page', 10);
         $clientJobs = ClientJob::paginate($perPage);
+
         return response()->json([
             'status' => 'success',
             'clientJobs' => $clientJobs
         ]);
     }
 
-    public function show($id) {
-        $clientJob = ClientJob::findOrFail($id);
+    public function show($slug) {
+        $clientJob = ClientJob::where('slug', $slug)->firstOrFail();
+        
         return response()->json([
             'status' => 'success',
             'clientJob' => $clientJob
@@ -40,6 +46,7 @@ class ClientJobController extends Controller
             ]);
     
             $clientJob = ClientJob::create([
+                'slug' => Str::uuid(),
                 'title' => $validated['title'],
                 'client' => json_encode($validated['client']),
                 'date' => $validated['date'],

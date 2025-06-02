@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Gallery;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
@@ -15,21 +16,53 @@ class GalleryController extends Controller
 
     public function store(Request $request) {
         $validated = $request->validate([
-            'image' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
             'category' => 'required|string',
             'description' => 'string|nullable',
         ]);
 
-        $imageUrl = $this->uploadImage($request->file('image'));
-
-        $validated['image'] = $imageUrl;
+        // Handle main image upload
+        if ($request->hasFile('image')) {
+            $validated['image'] = $this->uploadImage($request->file('image'));
+        }
 
         $gallery = Gallery::create($validated);
         return response()->json($gallery);
     }
 
+    public function update(Request $request, $id) {
+        $gallery = Gallery::findOrFail($id);
+        
+        $validated = $request->validate([
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
+            'category' => 'required|string',
+            'description' => 'string|nullable',
+        ]);
+
+        // Handle main image replacement
+        if ($request->hasFile('image')) {
+            // Delete the old image if it exists
+            if ($gallery->image) {
+                $oldImagePath = str_replace(url('/storage/'), '', $gallery->image);
+                Storage::disk('public')->delete($oldImagePath);
+            }
+            
+            $validated['image'] = $this->uploadImage($request->file('image'));
+        }
+
+        $gallery->update($validated);
+        return response()->json($gallery);
+    }
+
     public function destroy($id) {
         $gallery = Gallery::findOrFail($id);
+        
+        // Delete the associated image files if they exist
+        if ($gallery->image) {
+            $imagePath = str_replace(url('/storage/'), '', $gallery->image);
+            Storage::disk('public')->delete($imagePath);
+        }
+        
         $gallery->delete();
         return response()->json([
             'status' => 'success',
@@ -37,12 +70,6 @@ class GalleryController extends Controller
         ]);
     }
 
-    /**
-     * Upload an image to storage/gallery and return the URL path
-     *
-     * @param \Illuminate\Http\UploadedFile $image
-     * @return string
-     */
     private function uploadImage($image)
     {
         // Generate a unique filename with timestamp and original extension

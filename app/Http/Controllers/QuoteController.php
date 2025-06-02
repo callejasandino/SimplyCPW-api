@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Quote;
+use App\Models\Service;
 
 class QuoteController extends Controller
 {
@@ -25,6 +26,15 @@ class QuoteController extends Controller
             'status' => 'required|string|max:255',
             'agreedToTerms' => 'required|boolean',
         ]);
+
+        $servicesNeeded = json_decode($validated['servicesNeeded'], true);
+        
+        $services = [];
+
+        foreach ($servicesNeeded as $service) {
+            $service = Service::where('name', $service)->first();
+            $services[] = $service->id;
+        }
         
         Quote::create([
             'firstName' => $validated['firstName'],
@@ -32,7 +42,7 @@ class QuoteController extends Controller
             'email' => $validated['email'],
             'phone' => $validated['phone'],
             'address' => $validated['address'],
-            'servicesNeeded' => $validated['servicesNeeded'],
+            'servicesNeeded' => json_encode($services),
             'additionalInfo' => $validated['additionalInfo'],
             'status' => $validated['status'],
             'agreedToTerms' => $validated['agreedToTerms'],
@@ -56,6 +66,15 @@ class QuoteController extends Controller
             'status' => 'string|max:255',
             'agreedToTerms' => 'boolean',
         ]);
+        
+        $servicesNeeded = $validated['servicesNeeded'];
+
+        $services = [];
+
+        foreach ($servicesNeeded as $service) {
+            $service = Service::where('name', $service)->first();
+            $services[] = $service->id;
+        }
 
         $quote = Quote::findOrFail($request->id);
         $quote->update([
@@ -64,7 +83,7 @@ class QuoteController extends Controller
             'email' => $validated['email'],
             'phone' => $validated['phone'],
             'address' => $validated['address'],
-            'servicesNeeded' => json_encode($validated['servicesNeeded']),
+            'servicesNeeded' => json_encode($services),
             'additionalInfo' => $validated['additionalInfo'],
             'status' => $validated['status'],
             'agreedToTerms' => $validated['agreedToTerms'],
