@@ -8,9 +8,13 @@ use App\Http\Controllers\TestimonialController;
 use App\Http\Controllers\ServiceController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BlogController;
+use App\Http\Controllers\BusinessHoursController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\QuoteController;
 use App\Http\Controllers\EquipmentController;
+use App\Http\Controllers\ImapController;
 use App\Http\Controllers\MemberController;
+use App\Http\Controllers\SettingController;
 use App\Http\Controllers\WorkResultController;
 
 Route::prefix('auth')->group(function () {
@@ -18,6 +22,10 @@ Route::prefix('auth')->group(function () {
 });
 
 Route::prefix('client')->group(function () {
+    Route::prefix('settings')->group(function () {
+        Route::get('/', [SettingController::class, 'index']);
+    });
+    
     Route::prefix('jobs')->group(function () {
         Route::get('/{slug}', [ClientJobController::class, 'show']);
     });
@@ -41,6 +49,23 @@ Route::prefix('client')->group(function () {
     Route::prefix('work-results')->group(function () {
         Route::get('/', [WorkResultController::class, 'index']);
     });
+
+    Route::prefix('business-hours')->group(function () {
+        Route::get('/', [BusinessHoursController::class, 'index']);
+    });
+
+    Route::prefix('blogs')->group(function () {
+        Route::get('/', [BlogController::class, 'index']);
+        Route::get('/{slug}', [BlogController::class, 'show']);
+    });
+
+    Route::prefix('members')->group(function () {
+        Route::get('/', [MemberController::class, 'index']);
+    });
+
+    Route::prefix('testimonials')->group(function () {
+        Route::get('/', [TestimonialController::class, 'index']);
+    });
 });
 
 
@@ -52,12 +77,22 @@ Route::prefix('admin')
         Route::post('/logout', [AuthController::class, 'logout']);
     });
 
+    Route::prefix('dashboard')->group(function () {
+        Route::get('/', [DashboardController::class, 'index']);
+        Route::post('/monthly-report', [DashboardController::class, 'generateMonthlyReport']);
+    });
+
+    Route::prefix('settings')->group(function () {
+        Route::get('/', [SettingController::class, 'index']);
+        Route::post('/', [SettingController::class, 'store']);
+    });
+
     Route::prefix('client-jobs')->group(function () {
         Route::get('/', [ClientJobController::class, 'index']);
         Route::get('/{slug}', [ClientJobController::class, 'show']);
         Route::post('/', [ClientJobController::class, 'store']);
         Route::post('/update', [ClientJobController::class, 'update']);
-        Route::delete('/{id}', [ClientJobController::class, 'destroy']);
+        Route::delete('/{slug}', [ClientJobController::class, 'destroy']);
     });
 
     Route::prefix('gallery')->group(function () {
@@ -113,5 +148,19 @@ Route::prefix('admin')
         Route::get('/{slug}', [BlogController::class, 'show']);
         Route::post('/', [BlogController::class, 'update']);
         Route::delete('/{slug}', [BlogController::class, 'destroy']);
+    });
+
+    Route::prefix('business-hours')->group(function () {
+        Route::get('/', [BusinessHoursController::class, 'index']);
+        Route::post('/', [BusinessHoursController::class, 'store']);
+    });
+
+    Route::prefix('emails')->group(function () {
+        Route::get('/test-connection', [ImapController::class, 'testConnection']);
+        Route::get('/inbox', [ImapController::class, 'inbox']);
+        Route::post('/send', [ImapController::class, 'send']);
+        Route::get('/{uid}', [ImapController::class, 'show']);
+        Route::post('/{uid}/reply', [ImapController::class, 'reply']);
+        Route::delete('/{uid}', [ImapController::class, 'delete']);
     });
 });

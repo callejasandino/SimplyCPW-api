@@ -2,18 +2,18 @@
 
 namespace App\Http\Controllers;
 
+use App\Mail\JobCreatedMail;
 use Illuminate\Http\Request;
 use App\Models\ClientJob;
-use App\Models\Equipment;
-use App\Models\Member;
-use App\Models\Service;
-
+use Exception;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Str;
 class ClientJobController extends Controller
 {
     public function index()
     {
-        $perPage = request()->query('per_page', 10);
-        $clientJobs = ClientJob::paginate($perPage);
+        $clientJobs = ClientJob::paginate(10);
 
         return response()->json([
             'status' => 'success',
@@ -34,7 +34,7 @@ class ClientJobController extends Controller
         try {
             $validated = $request->validate([
                 'title' => 'required|string|max:255',
-                'client' => 'required|array',
+                'client' => 'required',
                 'date' => 'required|date',
                 'duration' => 'required|integer',
                 'status' => 'required|string|in:Scheduled,Pending,Confirmed,Completed,Cancelled',
@@ -58,6 +58,21 @@ class ClientJobController extends Controller
                 'team' => json_encode($validated['team']),
                 'equipment' => json_encode($validated['equipment'])
             ]);
+
+            $client = json_decode($validated['client'], true);
+
+            $jobMail = [
+                'name' => $client['name'],
+                'firstName' => $client['firstName'],
+                'lastName' => $client['lastName'],
+                'email' => $client['email'],
+                'address' => $client['address'],
+                'date' => $validated['date'],
+                'duration' => $validated['duration'],
+                'information_link' => env('VITE_APP_NAME') . '/client-job/' . $clientJob->slug
+            ];
+
+            Mail::to(env('MAIL_FROM_ADDRESS'))->send(new JobCreatedMail($jobMail));
 
             return response()->json([
                 'status' => 'success',
@@ -104,9 +119,9 @@ class ClientJobController extends Controller
         }
     }
 
-    public function destroy($id) {
+    public function destroy($slug) {
         try {
-            $clientJob = ClientJob::findOrFail($id);
+            $clientJob = ClientJob::where('slug', $slug)->firstOrFail();
             $clientJob->delete();
             return response()->json([
                 'status' => 'success',

@@ -2,51 +2,72 @@
 
 namespace App\Http\Controllers;
 
+use App\Mail\NewQuoteMail;
+use App\Mail\QuoteToUserEmail;
 use Illuminate\Http\Request;
 use App\Models\Quote;
 use App\Models\Service;
+use App\Models\Setting;
+use Illuminate\Support\Facades\Mail;
 
 class QuoteController extends Controller
 {
-    public function index() {
+    public function index() 
+    {
         $perPage = request()->query('per_page', 10);
         $quotes = Quote::paginate($perPage);
         return response()->json($quotes);
     }
 
-    public function store(Request $request) {
+    public function store(Request $request) 
+    {
         $validated = $request->validate([
             'firstName' => 'required|string|max:255',
             'lastName' => 'required|string|max:255',
             'email' => 'required|email',
             'phone' => 'required|string|max:255',
             'address' => 'required|string|max:255',
-            'servicesNeeded' => 'required|string|max:255',
-            'additionalInfo' => 'required|string|max:255',
-            'status' => 'required|string|max:255',
+            'servicesNeeded' => 'required|array',
+            'additionalInfo' => 'nullable|string|max:255',
             'agreedToTerms' => 'required|boolean',
         ]);
 
-        $servicesNeeded = json_decode($validated['servicesNeeded'], true);
+        $servicesNeeded = $validated['servicesNeeded'];
         
-        $services = [];
+        $servicesNames = [];
 
         foreach ($servicesNeeded as $service) {
-            $service = Service::where('name', $service)->first();
-            $services[] = $service->id;
+            $service = Service::where('id', $service)->first();
+            $servicesNames[] = $service->name;
         }
         
-        Quote::create([
+        $quote = Quote::create([
             'firstName' => $validated['firstName'],
             'lastName' => $validated['lastName'],
             'email' => $validated['email'],
             'phone' => $validated['phone'],
             'address' => $validated['address'],
-            'servicesNeeded' => json_encode($services),
+            'servicesNeeded' => json_encode($servicesNeeded),
             'additionalInfo' => $validated['additionalInfo'],
-            'status' => $validated['status'],
+            'status' => 'pending',
             'agreedToTerms' => $validated['agreedToTerms'],
         ]);
+
+        $setting = Setting::first();
+        
+        $quoteMail = [
+            'firstName' => $quote->firstName,
+            'lastName' => $quote->lastName,
+            'email' => $quote->email,
+            'phone' => $quote->phone,
+            'address' => $quote->address,
+            'servicesNeeded' => $servicesNames,
+            'setting' => $setting,
+        ];
+
+        Mail::to($quote->email)->send(new QuoteToUserEmail($quoteMail));
+
+        Mail::to(env('INFO_EMAIL'))->send(new NewQuoteMail($quoteMail));
 
         return response()->json([
             'status' => 'success',

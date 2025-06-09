@@ -9,8 +9,7 @@ use Illuminate\Support\Facades\Storage;
 class GalleryController extends Controller
 {
     public function index() {
-        $perPage = request()->query('per_page', 10);
-        $galleries = Gallery::paginate($perPage);
+        $galleries = Gallery::paginate(10);
         return response()->json($galleries);
     }
 
