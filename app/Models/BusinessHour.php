@@ -7,10 +7,10 @@ use Illuminate\Database\Eloquent\Model;
 class BusinessHour extends Model
 {
     protected $fillable = [
-        'hours'
+        'hours',
     ];
 
     protected $casts = [
-        'hours' => 'array'
+        'hours' => 'array',
     ];
 }

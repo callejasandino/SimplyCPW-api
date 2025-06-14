@@ -11,7 +11,7 @@ use Illuminate\Queue\SerializesModels;
 
 class JobCreatedMail extends Mailable implements ShouldQueue
 {
-    use Queueable, SerializesModels, ShouldQueue;
+    use Queueable, SerializesModels;
 
     /**
      * Create a new message instance.
@@ -31,7 +31,7 @@ class JobCreatedMail extends Mailable implements ShouldQueue
         return new Envelope(
             subject: 'Cleaning has been scheduled',
             from: env('INFO_EMAIL'),
-            replyTo: env('INFO_EMAIL'),
+            replyTo: $this->job['email'],
         );
     }
 

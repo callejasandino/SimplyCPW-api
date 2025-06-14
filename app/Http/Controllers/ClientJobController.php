@@ -3,34 +3,105 @@
 namespace App\Http\Controllers;
 
 use App\Mail\JobCreatedMail;
-use Illuminate\Http\Request;
 use App\Models\ClientJob;
+use App\Models\Equipment;
+use App\Models\Member;
+use App\Models\Service;
+use App\Models\Setting;
 use Exception;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
+
 class ClientJobController extends Controller
 {
     public function index()
     {
-        $clientJobs = ClientJob::paginate(10);
+        $page = request()->get('page', 1);
+
+        $cacheKey = "client_jobs_page_{$page}";
+
+        $clientJobs = Cache::remember($cacheKey, 300, function () {
+            return ClientJob::paginate(10);
+        });
 
         return response()->json([
             'status' => 'success',
-            'clientJobs' => $clientJobs
+            'clientJobs' => $clientJobs,
         ]);
     }
 
-    public function show($slug) {
-        $clientJob = ClientJob::where('slug', $slug)->firstOrFail();
-        
+    public function show($slug)
+    {
+        $clientJob = ClientJob::where('slug', $slug)->firstOrFail()->makeHidden(['id', 'slug', 'created_at', 'updated_at', 'client.id', 'client.phone']);
+
+        $settings = Setting::select([
+            'company_facebook',
+            'company_instagram',
+            'company_twitter',
+            'company_linkedin',
+            'company_youtube',
+            'company_tiktok',
+            'company_pinterest',
+            'company_name',
+            'company_address',
+            'company_phone',
+            'company_email',
+            'company_logo',
+        ])->first();
+
+        $services = $clientJob->services;
+        $serviceNames = [];
+        $equipementNames = [];
+        $memberNames = [];
+
+        $equipements = $clientJob->equipment;
+
+        if ($equipements) {
+            foreach ($equipements as $equipement) {
+                $equipement = Equipment::where('id', $equipement)->first();
+                if ($equipement) {
+                    $equipementNames[] = $equipement->name;
+                }
+            }
+        }
+
+        if ($services) {
+            foreach ($services as $service) {
+                $service = Service::where('id', $service)->first();
+                $serviceNames[] = $service->name;
+            }
+        }
+
+        $teams = $clientJob->team;
+        if ($teams) {
+            foreach ($teams as $team) {
+                $member = Member::where('id', $team)->first();
+                if ($member) {
+                    $memberNames[] = [
+                        'name' => $member->name,
+                        'image' => $member->image,
+                        'contact_number' => $member->contact_number,
+                    ];
+                }
+            }
+        }
+
+        $clientJob->services = $serviceNames;
+        $clientJob->equipment = $equipementNames;
+        $clientJob->team = $memberNames;
+
         return response()->json([
             'status' => 'success',
-            'clientJob' => $clientJob
+            'clientJob' => $clientJob,
+            'settings' => $settings,
         ]);
     }
 
-    public function store(Request $request) {
+    public function store(Request $request)
+    {
         try {
             $validated = $request->validate([
                 'title' => 'required|string|max:255',
@@ -42,56 +113,58 @@ class ClientJobController extends Controller
                 'notes' => 'string|nullable',
                 'services' => 'array|nullable',
                 'team' => 'array|nullable',
-                'equipment' => 'array|nullable'
+                'equipment' => 'array|nullable',
             ]);
-    
+
             $clientJob = ClientJob::create([
                 'slug' => Str::uuid(),
                 'title' => $validated['title'],
-                'client' => json_encode($validated['client']),
+                'client' => $validated['client'],
                 'date' => $validated['date'],
                 'duration' => $validated['duration'],
                 'status' => $validated['status'],
                 'price' => $validated['price'],
                 'notes' => $validated['notes'],
-                'services' => json_encode($validated['services']),
-                'team' => json_encode($validated['team']),
-                'equipment' => json_encode($validated['equipment'])
+                'services' => $validated['services'],
+                'team' => $validated['team'],
+                'equipment' => $validated['equipment'],
             ]);
 
-            $client = json_decode($validated['client'], true);
+            $client = $clientJob->client;
 
             $jobMail = [
-                'name' => $client['name'],
-                'firstName' => $client['firstName'],
-                'lastName' => $client['lastName'],
-                'email' => $client['email'],
+                'name' => $client['firstName'].' '.$client['lastName'],
+                'email' => $client['email'] ?? null,
                 'address' => $client['address'],
                 'date' => $validated['date'],
                 'duration' => $validated['duration'],
-                'information_link' => env('VITE_APP_NAME') . '/client-job/' . $clientJob->slug
+                'information_link' => env('VITE_APP_NAME').'/job/'.$clientJob->slug,
             ];
 
-            Mail::to(env('MAIL_FROM_ADDRESS'))->send(new JobCreatedMail($jobMail));
+            Mail::to($jobMail['email'])->send(new JobCreatedMail($jobMail));
+
+            $this->clearClientJobCache();
 
             return response()->json([
                 'status' => 'success',
                 'message' => 'Client job created successfully',
-                'clientJob' => $clientJob
+                'clientJob' => $clientJob,
             ], 201);
         } catch (Exception $e) {
-            Log::error('Error creating client job: ' . $e->getMessage());
+            Log::error('Error creating client job: '.$e->getMessage());
+
             return response()->json([
                 'status' => 'error',
-                'message' => 'Error creating client job'
+                'message' => 'Error creating client job',
             ], 500);
         }
     }
 
-    public function update(Request $request) {
+    public function update(Request $request)
+    {
         try {
             $validated = $request->validate([
-                'id' => 'required|integer',
+                'uuid' => 'required|string|max:255',
                 'title' => 'string|max:255|nullable',
                 'client' => 'array|nullable',
                 'date' => 'date|nullable',
@@ -101,38 +174,55 @@ class ClientJobController extends Controller
                 'notes' => 'string|nullable',
                 'services' => 'array|nullable',
                 'team' => 'array|nullable',
-                'equipment' => 'array|nullable'
+                'equipment' => 'array|nullable',
             ]);
 
-            $clientJob = ClientJob::findOrFail($validated['id']);
+            $clientJob = ClientJob::where('slug', $validated['uuid'])->firstOrFail();
             $clientJob->update($validated);
+
+            $this->clearClientJobCache();
+
             return response()->json([
                 'status' => 'success',
-                'clientJob' => $clientJob
+                'clientJob' => $clientJob,
             ]);
         } catch (Exception $e) {
-            Log::error('Error updating client job: ' . $e->getMessage());
+            Log::error('Error updating client job: '.$e->getMessage());
+
             return response()->json([
                 'status' => 'error',
-                'message' => 'Error updating client job'
+                'message' => 'Error updating client job',
             ], 500);
         }
     }
 
-    public function destroy($slug) {
+    public function destroy($slug)
+    {
         try {
             $clientJob = ClientJob::where('slug', $slug)->firstOrFail();
             $clientJob->delete();
+
+            $this->clearClientJobCache();
+
             return response()->json([
                 'status' => 'success',
-                'message' => 'Client job deleted successfully'
+                'message' => 'Client job deleted successfully',
             ], 200);
         } catch (Exception $e) {
-            Log::error('Error deleting client job: ' . $e->getMessage());
+            Log::error('Error deleting client job: '.$e->getMessage());
+
             return response()->json([
                 'status' => 'error',
-                'message' => 'Error deleting client job'
+                'message' => 'Error deleting client job',
             ], 500);
+        }
+    }
+
+    private function clearClientJobCache()
+    {
+        // Clear multiple pages of cache (assuming up to 100 pages)
+        for ($page = 1; $page <= 100; $page++) {
+            Cache::forget("client_jobs_page_{$page}");
         }
     }
 }

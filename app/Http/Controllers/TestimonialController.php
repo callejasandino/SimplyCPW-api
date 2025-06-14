@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Testimonial;
+use Illuminate\Support\Facades\Cache;
 
 class TestimonialController extends Controller
 {
@@ -13,11 +14,15 @@ class TestimonialController extends Controller
      */
     public function index()
     {
-        $testimonials = Testimonial::all();
-        
+        $page = request()->get('page', 1);
+        $cacheKey = "testimonials_page_{$page}";
+        $testimonials = Cache::remember($cacheKey, 300, function () {
+            return Testimonial::all();
+        });
+
         return response()->json([
             'status' => 'success',
-            'data' => $testimonials
+            'data' => $testimonials,
         ]);
     }
 
@@ -30,19 +35,19 @@ class TestimonialController extends Controller
     public function destroy($id)
     {
         $testimonial = Testimonial::find($id);
-        
-        if (!$testimonial) {
+
+        if (! $testimonial) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Testimonial not found'
+                'message' => 'Testimonial not found',
             ], 404);
         }
-        
+
         $testimonial->delete();
-        
+
         return response()->json([
             'status' => 'success',
-            'message' => 'Testimonial deleted successfully'
+            'message' => 'Testimonial deleted successfully',
         ]);
     }
 }

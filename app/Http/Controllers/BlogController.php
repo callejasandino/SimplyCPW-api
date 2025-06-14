@@ -2,15 +2,26 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
+use App\Helpers\ClearCache;
+use App\Helpers\DeleteImage;
+use App\Helpers\UploadImage;
+use App\Http\Requests\StoreBlogRequest;
+use App\Http\Requests\UpdateBlogRequest;
 use App\Models\Blog;
-use Illuminate\Support\Facades\Storage;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
+
 class BlogController extends Controller
 {
-    public function index()
+    public function index(): JsonResponse
     {
-        $blogs = Blog::paginate(10);
+        $page = request()->get('page', 1);
+        $cacheKey = "blogs_page_{$page}";
+        $blogs = Cache::remember($cacheKey, 300, function () {
+            return Blog::paginate(10);
+        });
+
         return response()->json(
             [
                 'blogs' => $blogs,
@@ -18,29 +29,24 @@ class BlogController extends Controller
         );
     }
 
-    public function store(Request $request)
+    public function store(StoreBlogRequest $request): JsonResponse
     {
-        $request->validate([
-            'title' => 'required|string|max:255',
-            'content' => 'required|string',
-            'image' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
-            'author' => 'required|string|max:255',
-        ]);
-
         $image = null;
 
         if ($request->hasFile('image')) {
-            $image = $request->file('image');
-            $imageUrl = $this->uploadImage($image);
+            $image = (new UploadImage)->uploadImage('blogs', $request->file('image'));
         }
 
         $blog = Blog::create([
-            'title' => $request->title,
+            'title' => $request->input('title'),
             'slug' => Str::uuid(),
-            'content' => $request->content,
-            'image' => $imageUrl,
-            'author' => $request->author,
+            'content' => $request->input('content'),
+            'filename' => $image['filename'],
+            'image' => $image['path'],
+            'author' => $request->input('author'),
         ]);
+
+        $this->clearBlogCache();
 
         return response()->json(
             [
@@ -50,11 +56,11 @@ class BlogController extends Controller
         );
     }
 
-    public function show($slug)
-    {   
+    public function show($slug): JsonResponse
+    {
         $blog = Blog::where('slug', $slug)->first();
-        
-        if (!$blog) {
+
+        if (! $blog) {
             return response()->json([
                 'message' => 'Blog not found',
             ], 404);
@@ -65,70 +71,64 @@ class BlogController extends Controller
         ], 200);
     }
 
-    public function update(Request $request)
+    public function update(UpdateBlogRequest $request): JsonResponse
     {
-        $request->validate([
-            'title' => 'required|string|max:255',
-            'content' => 'required|string',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
-            'author' => 'required|string|max:255',
-            'slug' => 'required|string|max:255',
-        ]);
-
         $blog = Blog::where('slug', $request->slug)->first();
 
-        if (!$blog) {
+        if (! $blog) {
             return response()->json([
                 'message' => 'Blog not found',
             ], 404);
         }
 
         $updateData = [
-            'title' => $request->title,
-            'content' => $request->content,
-            'author' => $request->author,
+            'title' => $request->input('title'),
+            'content' => $request->input('content'),
+            'author' => $request->input('author'),
         ];
 
         // Only update image if a new one is uploaded
         if ($request->hasFile('image')) {
-            $image = $request->file('image');
-            $imageUrl = $this->uploadImage($image);
-            $updateData['image'] = $imageUrl;
+            $image = (new UploadImage)->uploadImage('blogs', $request->file('image'));
+
+            (new DeleteImage)->deleteImage('blogs/'.$blog->filename);
+
+            $updateData['filename'] = $image['filename'];
+            $updateData['image'] = $image['path'];
         }
 
         $blog->update($updateData);
 
+        $this->clearBlogCache();
+
         return response()->json([
             'blog' => $blog->fresh(),
         ], 200);
-    }   
+    }
 
-    public function destroy($slug)
+    public function destroy($slug): JsonResponse
     {
         $blog = Blog::where('slug', $slug)->first();
-        
-        if (!$blog) {
+
+        if (! $blog) {
             return response()->json([
                 'message' => 'Blog not found',
             ], 404);
-        }   
+        }
+
+        (new DeleteImage)->deleteImage('blogs/'.$blog->filename);
 
         $blog->delete();
+
+        $this->clearBlogCache();
 
         return response()->json([
             'message' => 'Blog deleted successfully',
         ], 200);
     }
-    
-    private function uploadImage($image)
+
+    private function clearBlogCache()
     {
-        // Generate a unique filename with timestamp and original extension
-        $filename = time() . '_' . uniqid() . '.' . $image->getClientOriginalExtension();
-        
-        // Store the image in the gallery directory within the public disk
-        $path = $image->storeAs('work-results', $filename, 'public');
-        
-        // Return the URL path that can be used to access the image
-        return url(Storage::url($path));
+        (new ClearCache)->clear('blogs_page_');
     }
 }

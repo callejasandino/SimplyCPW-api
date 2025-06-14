@@ -10,6 +10,6 @@ class DashboardData extends Model
         'stats',
         'monthlyData',
         'serviceDistribution',
-        'leadSources'
+        'leadSources',
     ];
 }

@@ -17,13 +17,13 @@ class ClientJob extends Model
         'notes',
         'services',
         'team',
-        'equipment'
+        'equipment',
     ];
 
     protected $casts = [
         'client' => 'array',
         'services' => 'array',
         'team' => 'array',
-        'equipment' => 'array'
+        'equipment' => 'array',
     ];
 }

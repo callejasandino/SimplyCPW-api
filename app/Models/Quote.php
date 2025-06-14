@@ -15,6 +15,6 @@ class Quote extends Model
         'servicesNeeded',
         'additionalInfo',
         'status',
-        'agreedToTerms'
+        'agreedToTerms',
     ];
 }

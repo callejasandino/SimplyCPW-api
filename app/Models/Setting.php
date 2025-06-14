@@ -11,6 +11,7 @@ class Setting extends Model
         'company_address',
         'company_phone',
         'company_email',
+        'company_logo_filename',
         'company_logo',
         'company_description',
         'company_facebook',

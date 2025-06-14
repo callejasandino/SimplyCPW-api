@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Job Created - {{ $name ?? 'SimplyCPW' }}</title>
+    <title>Job Created - {{ $job['name'] ?? 'SimplyCPW' }}</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -98,7 +98,7 @@
         </div>
 
         <div class="content">
-            <p>Dear {{ $firstName }} {{ $lastName }},</p>
+            <p>Dear {{ $job['name'] }},</p>
             
             <p>We're pleased to confirm that your job has been successfully created and scheduled. Below are the details of your upcoming service:</p>
 
@@ -107,37 +107,32 @@
                 
                 <div class="detail-row">
                     <span class="detail-label">Client Name:</span>
-                    <span class="detail-value">{{ $name }}</span>
-                </div>
-                
-                <div class="detail-row">
-                    <span class="detail-label">Contact Person:</span>
-                    <span class="detail-value">{{ $firstName }} {{ $lastName }}</span>
+                    <span class="detail-value">{{ $job['name'] }}</span>
                 </div>
                 
                 <div class="detail-row">
                     <span class="detail-label">Email:</span>
-                    <span class="detail-value">{{ $email }}</span>
+                    <span class="detail-value">{{ $job['email'] }}</span>
                 </div>
                 
                 <div class="detail-row">
                     <span class="detail-label">Service Address:</span>
-                    <span class="detail-value">{{ $address }}</span>
+                    <span class="detail-value">{{ $job['address'] }}</span>
                 </div>
                 
                 <div class="detail-row">
                     <span class="detail-label">Scheduled Date:</span>
-                    <span class="detail-value">{{ \Carbon\Carbon::parse($date)->format('F j, Y') }}</span>
+                    <span class="detail-value">{{ \Carbon\Carbon::parse($job['date'])->format('F j, Y') }}</span>
                 </div>
                 
                 <div class="detail-row">
                     <span class="detail-label">Estimated Duration:</span>
-                    <span class="detail-value">{{ $duration }} hours</span>
+                    <span class="detail-value">{{ $job['duration'] }} hours</span>
                 </div>
             </div>
 
             <div style="text-align: center;">
-                <a href="{{ $information_link }}" class="cta-button">View Job Details</a>
+                <a href="{{ $job['information_link'] }}" class="cta-button">View Job Details</a>
             </div>
 
             <p><strong>What's Next?</strong></p>

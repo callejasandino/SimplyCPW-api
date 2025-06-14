@@ -26,7 +26,7 @@ Route::prefix('client')->group(function () {
         Route::get('/', [SettingController::class, 'index']);
     });
     
-    Route::prefix('jobs')->group(function () {
+    Route::prefix('job')->group(function () {
         Route::get('/{slug}', [ClientJobController::class, 'show']);
     });
 
@@ -98,7 +98,6 @@ Route::prefix('admin')
     Route::prefix('gallery')->group(function () {
         Route::get('/', [GalleryController::class, 'index']);
         Route::post('/', [GalleryController::class, 'store']);
-        Route::put('/{id}', [GalleryController::class, 'update']);
         Route::delete('/{id}', [GalleryController::class, 'destroy']);
     });
 
@@ -119,6 +118,7 @@ Route::prefix('admin')
         Route::get('/', [QuoteController::class, 'index']);
         Route::post('/update', [QuoteController::class, 'update']);
         Route::delete('/{id}', [QuoteController::class, 'destroy']);
+        Route::post('/warm-cache', [QuoteController::class, 'warmCache']);
     });
 
     Route::prefix('equipments')->group(function () {
@@ -146,7 +146,7 @@ Route::prefix('admin')
         Route::get('/', [BlogController::class, 'index']);
         Route::post('/', [BlogController::class, 'store']);
         Route::get('/{slug}', [BlogController::class, 'show']);
-        Route::post('/', [BlogController::class, 'update']);
+        Route::post('/update', [BlogController::class, 'update']);
         Route::delete('/{slug}', [BlogController::class, 'destroy']);
     });
 

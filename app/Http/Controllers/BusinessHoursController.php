@@ -7,36 +7,38 @@ use Illuminate\Http\Request;
 
 class BusinessHoursController extends Controller
 {
-    public function index() {
+    public function index()
+    {
         $businessHours = BusinessHour::first();
-        
+
         return response()->json([
             'status' => 'success',
-            'data' => $businessHours
+            'data' => $businessHours,
         ], 200);
     }
 
-    public function store(Request $request) {
+    public function store(Request $request)
+    {
 
         $request->validate([
-            'hours' => 'required|array'
+            'hours' => 'required|array',
         ]);
 
         $businessHours = BusinessHour::first();
 
         if ($businessHours) {
             $businessHours->update([
-                'hours' => json_encode($request->input('hours'))
+                'hours' => json_encode($request->input('hours')),
             ]);
         } else {
             BusinessHour::create([
-                'hours' => json_encode($request->input('hours'))
+                'hours' => json_encode($request->input('hours')),
             ]);
         }
 
         return response()->json([
             'status' => 'success',
-            'message' => 'Business hours created successfully'
+            'message' => 'Business hours created successfully',
         ], 201);
     }
 }

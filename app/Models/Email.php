@@ -4,7 +4,6 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Carbon\Carbon;
 
 class Email extends Model
 {
@@ -29,7 +28,7 @@ class Email extends Model
         'flags',
         'attachments',
         'folder',
-        'synced_at'
+        'synced_at',
     ];
 
     protected $casts = [
@@ -39,7 +38,7 @@ class Email extends Model
         'is_deleted' => 'boolean',
         'is_spam' => 'boolean',
         'flags' => 'array',
-        'attachments' => 'array'
+        'attachments' => 'array',
     ];
 
     // Scopes
@@ -71,7 +70,7 @@ class Email extends Model
     // Accessors
     public function getHasAttachmentsAttribute()
     {
-        return !empty($this->attachments);
+        return ! empty($this->attachments);
     }
 
     public function getFormattedDateAttribute()
@@ -82,7 +81,8 @@ class Email extends Model
     public function getPreviewAttribute()
     {
         $text = strip_tags($this->body_html ?: $this->body_text);
-        return strlen($text) > 100 ? substr($text, 0, 100) . '...' : $text;
+
+        return strlen($text) > 100 ? substr($text, 0, 100).'...' : $text;
     }
 
     // Methods

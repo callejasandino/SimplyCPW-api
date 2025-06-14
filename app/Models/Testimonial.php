@@ -12,6 +12,6 @@ class Testimonial extends Model
         'rating',
         'title',
         'description',
-        'date'
+        'date',
     ];
 }

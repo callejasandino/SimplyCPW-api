@@ -2,12 +2,12 @@
 
 namespace App\Http\Controllers;
 
-use Webklex\IMAP\Facades\Client;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\Facades\Log;
-use Carbon\Carbon;
 use App\Models\Email;
+use Carbon\Carbon;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
+use Webklex\IMAP\Facades\Client;
 
 class ImapController extends Controller
 {
@@ -16,7 +16,7 @@ class ImapController extends Controller
         try {
             // First try to get emails from database
             $dbEmails = Email::inbox()->orderBy('email_date', 'desc')->limit(50)->get();
-            
+
             // If we have recent emails in DB (less than 5 minutes old), use them
             $lastSync = $dbEmails->first()?->synced_at;
             if ($lastSync && $lastSync->gt(Carbon::now()->subMinutes(5))) {
@@ -25,8 +25,8 @@ class ImapController extends Controller
                     'data' => [
                         'messages' => $this->formatDbEmails($dbEmails),
                         'total' => $dbEmails->count(),
-                        'source' => 'database'
-                    ]
+                        'source' => 'database',
+                    ],
                 ]);
             }
 
@@ -42,7 +42,7 @@ class ImapController extends Controller
                 $fromCollection = $message->getFrom();
                 $toCollection = $message->getTo();
                 $flags = $message->getFlags()->toArray();
-                
+
                 // Safely get from address
                 $fromEmail = 'unknown@unknown.com';
                 $fromName = 'Unknown';
@@ -51,7 +51,7 @@ class ImapController extends Controller
                     $fromEmail = $fromAddress->mail ?: $fromEmail;
                     $fromName = $fromAddress->personal ?: $fromAddress->mail ?: $fromName;
                 }
-                
+
                 // Safely get to address
                 $toEmail = 'info@simplycpw.com';
                 $toName = 'SimplyCPW';
@@ -60,7 +60,7 @@ class ImapController extends Controller
                     $toEmail = $toAddress->mail ?: $toEmail;
                     $toName = $toAddress->personal ?: $toAddress->mail ?: $toName;
                 }
-                
+
                 $emailData = [
                     'uid' => $message->getUid(),
                     'subject' => $message->getSubject() ?: 'No Subject',
@@ -73,16 +73,16 @@ class ImapController extends Controller
                     'email_date' => $message->getDate() ? Carbon::parse($message->getDate()) : Carbon::now(),
                     'is_read' => in_array('\\Seen', $flags),
                     'flags' => $flags,
-                    'attachments' => $message->getAttachments()->count() > 0 ? 
-                        $message->getAttachments()->map(function($attachment) {
+                    'attachments' => $message->getAttachments()->count() > 0 ?
+                        $message->getAttachments()->map(function ($attachment) {
                             return [
                                 'name' => $attachment->getName(),
                                 'size' => $attachment->getSize(),
-                                'type' => $attachment->getType()
+                                'type' => $attachment->getType(),
                             ];
                         })->toArray() : [],
                     'priority' => $message->getPriority() ?: 'normal',
-                    'synced_at' => Carbon::now()
+                    'synced_at' => Carbon::now(),
                 ];
 
                 // Sync to database
@@ -98,14 +98,14 @@ class ImapController extends Controller
                     'from' => [
                         [
                             'name' => $fromName,
-                            'mail' => $fromEmail
-                        ]
+                            'mail' => $fromEmail,
+                        ],
                     ],
                     'to' => [
                         [
                             'name' => $toName,
-                            'mail' => $toEmail
-                        ]
+                            'mail' => $toEmail,
+                        ],
                     ],
                     'date' => $emailData['email_date']->format('Y-m-d H:i:s'),
                     'body' => $emailData['body_text'],
@@ -122,8 +122,8 @@ class ImapController extends Controller
                 'data' => [
                     'messages' => $formattedMessages,
                     'total' => count($formattedMessages),
-                    'source' => 'imap'
-                ]
+                    'source' => 'imap',
+                ],
             ]);
 
         } catch (\Exception $e) {
@@ -132,41 +132,41 @@ class ImapController extends Controller
                 'message' => $e->getMessage(),
                 'file' => $e->getFile(),
                 'line' => $e->getLine(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
-            
+
             // Fallback to database if IMAP fails
             $dbEmails = Email::inbox()->orderBy('email_date', 'desc')->limit(50)->get();
-            
+
             return response()->json([
                 'status' => $dbEmails->isEmpty() ? 'error' : 'success',
                 'data' => [
                     'messages' => $this->formatDbEmails($dbEmails),
                     'total' => $dbEmails->count(),
-                    'source' => 'database_fallback'
+                    'source' => 'database_fallback',
                 ],
-                'message' => $dbEmails->isEmpty() ? 'Failed to fetch emails: ' . $e->getMessage() : 'Using cached emails due to IMAP error: ' . $e->getMessage()
+                'message' => $dbEmails->isEmpty() ? 'Failed to fetch emails: '.$e->getMessage() : 'Using cached emails due to IMAP error: '.$e->getMessage(),
             ], $dbEmails->isEmpty() ? 500 : 200);
         }
     }
 
     private function formatDbEmails($emails)
     {
-        return $emails->map(function($email) {
+        return $emails->map(function ($email) {
             return [
                 'uid' => $email->uid,
                 'subject' => $email->subject,
                 'from' => [
                     [
                         'name' => $email->from_name,
-                        'mail' => $email->from_email
-                    ]
+                        'mail' => $email->from_email,
+                    ],
                 ],
                 'to' => [
                     [
                         'name' => $email->to_name,
-                        'mail' => $email->to_email
-                    ]
+                        'mail' => $email->to_email,
+                    ],
                 ],
                 'date' => $email->email_date->format('Y-m-d H:i:s'),
                 'body' => $email->body_text,
@@ -187,10 +187,10 @@ class ImapController extends Controller
             $folder = $client->getFolder('INBOX');
             $message = $folder->query()->getMessage($uid);
 
-            if (!$message) {
+            if (! $message) {
                 return response()->json([
                     'status' => 'error',
-                    'message' => 'Email not found'
+                    'message' => 'Email not found',
                 ], 404);
             }
 
@@ -206,7 +206,7 @@ class ImapController extends Controller
                 $fromEmail = $fromAddress->mail ?: $fromEmail;
                 $fromName = $fromAddress->personal ?: $fromAddress->mail ?: $fromName;
             }
-            
+
             // Safely get to address
             $toEmail = 'info@simplycpw.com';
             $toName = 'SimplyCPW';
@@ -222,26 +222,26 @@ class ImapController extends Controller
                 'from' => [
                     [
                         'name' => $fromName,
-                        'mail' => $fromEmail
-                    ]
+                        'mail' => $fromEmail,
+                    ],
                 ],
                 'to' => [
                     [
                         'name' => $toName,
-                        'mail' => $toEmail
-                    ]
+                        'mail' => $toEmail,
+                    ],
                 ],
                 'date' => $message->getDate() ? Carbon::parse($message->getDate())->format('Y-m-d H:i:s') : Carbon::now()->format('Y-m-d H:i:s'),
                 'body' => $message->getTextBody() ?: '',
                 'html_body' => $message->getHTMLBody() ?: '',
                 'flags' => $flags,
                 'read' => in_array('\\Seen', $flags),
-                'attachments' => $message->getAttachments()->count() > 0 ? 
-                    $message->getAttachments()->map(function($attachment) {
+                'attachments' => $message->getAttachments()->count() > 0 ?
+                    $message->getAttachments()->map(function ($attachment) {
                         return [
                             'name' => $attachment->getName(),
                             'size' => $attachment->getSize(),
-                            'type' => $attachment->getType()
+                            'type' => $attachment->getType(),
                         ];
                     })->toArray() : [],
                 'priority' => $message->getPriority() ?: 'normal',
@@ -249,13 +249,13 @@ class ImapController extends Controller
 
             return response()->json([
                 'status' => 'success',
-                'message' => $formattedMessage
+                'message' => $formattedMessage,
             ]);
 
         } catch (\Exception $e) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Failed to fetch email: ' . $e->getMessage()
+                'message' => 'Failed to fetch email: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -264,7 +264,7 @@ class ImapController extends Controller
     {
         try {
             $request->validate([
-                'reply_body' => 'required|string'
+                'reply_body' => 'required|string',
             ]);
 
             $client = Client::account('default');
@@ -272,16 +272,16 @@ class ImapController extends Controller
             $folder = $client->getFolder('INBOX');
             $message = $folder->query()->getMessage($uid);
 
-            if (!$message) {
+            if (! $message) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Original email not found'
+                    'message' => 'Original email not found',
                 ], 404);
             }
 
             $replyToCollection = $message->getReplyTo();
             $fromCollection = $message->getFrom();
-            
+
             // Safely get reply-to or from address
             $to = 'unknown@unknown.com';
             if ($replyToCollection && $replyToCollection->count() > 0) {
@@ -294,20 +294,20 @@ class ImapController extends Controller
 
             Mail::raw($request->input('reply_body'), function ($mail) use ($to, $message) {
                 $mail->to($to)
-                    ->subject('Re: ' . $message->getSubject())
+                    ->subject('Re: '.$message->getSubject())
                     ->from(config('mail.from.address'), config('mail.from.name'));
             });
 
             return response()->json([
                 'success' => true,
                 'message' => 'Reply sent successfully!',
-                'to' => $to
+                'to' => $to,
             ]);
 
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to send reply: ' . $e->getMessage()
+                'message' => 'Failed to send reply: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -334,7 +334,7 @@ class ImapController extends Controller
                 }
             } catch (\Exception $imapError) {
                 // IMAP deletion failed, but database is updated
-                Log::warning('IMAP deletion failed for UID: ' . $uid . ' - ' . $imapError->getMessage());
+                Log::warning('IMAP deletion failed for UID: '.$uid.' - '.$imapError->getMessage());
             }
 
             return response()->json([
@@ -345,7 +345,7 @@ class ImapController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to delete email: ' . $e->getMessage()
+                'message' => 'Failed to delete email: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -355,10 +355,10 @@ class ImapController extends Controller
         try {
             $client = Client::account('default');
             $client->connect();
-            
+
             $folder = $client->getFolder('INBOX');
             $messageCount = $folder->messages()->count();
-            
+
             // Get a sample message to test address parsing
             $sampleData = null;
             if ($messageCount > 0) {
@@ -370,12 +370,12 @@ class ImapController extends Controller
                         $sampleData = [
                             'sample_from_properties' => get_object_vars($fromAddress),
                             'available_methods' => get_class_methods($fromAddress),
-                            'class_name' => get_class($fromAddress)
+                            'class_name' => get_class($fromAddress),
                         ];
                     }
                 }
             }
-            
+
             return response()->json([
                 'status' => 'success',
                 'message' => 'IMAP connection successful',
@@ -383,10 +383,10 @@ class ImapController extends Controller
                     'connected' => true,
                     'message_count' => $messageCount,
                     'folder_name' => $folder->name,
-                    'debug_info' => $sampleData
-                ]
+                    'debug_info' => $sampleData,
+                ],
             ]);
-            
+
         } catch (\Exception $e) {
             Log::error('IMAP Connection Test Failed', [
                 'error' => $e->getMessage(),
@@ -394,21 +394,21 @@ class ImapController extends Controller
                     'host' => config('imap.accounts.default.host'),
                     'port' => config('imap.accounts.default.port'),
                     'username' => config('imap.accounts.default.username'),
-                    'encryption' => config('imap.accounts.default.encryption')
-                ]
+                    'encryption' => config('imap.accounts.default.encryption'),
+                ],
             ]);
-            
+
             return response()->json([
                 'status' => 'error',
-                'message' => 'IMAP connection failed: ' . $e->getMessage(),
+                'message' => 'IMAP connection failed: '.$e->getMessage(),
                 'data' => [
                     'connected' => false,
                     'config_check' => [
-                        'host_set' => !empty(config('imap.accounts.default.host')),
-                        'username_set' => !empty(config('imap.accounts.default.username')),
-                        'password_set' => !empty(config('imap.accounts.default.password'))
-                    ]
-                ]
+                        'host_set' => ! empty(config('imap.accounts.default.host')),
+                        'username_set' => ! empty(config('imap.accounts.default.username')),
+                        'password_set' => ! empty(config('imap.accounts.default.password')),
+                    ],
+                ],
             ], 500);
         }
     }
@@ -419,7 +419,7 @@ class ImapController extends Controller
             $request->validate([
                 'to' => 'required|email',
                 'subject' => 'required|string|max:255',
-                'message' => 'required|string'
+                'message' => 'required|string',
             ]);
 
             $to = $request->input('to');
@@ -435,7 +435,7 @@ class ImapController extends Controller
 
             // Save to database as sent email
             Email::create([
-                'uid' => 'sent_' . time() . '_' . rand(1000, 9999),
+                'uid' => 'sent_'.time().'_'.rand(1000, 9999),
                 'subject' => $subject,
                 'from_email' => config('mail.from.address'),
                 'from_name' => config('mail.from.name'),
@@ -447,31 +447,31 @@ class ImapController extends Controller
                 'is_read' => true,
                 'folder' => 'sent',
                 'priority' => 'normal',
-                'synced_at' => Carbon::now()
+                'synced_at' => Carbon::now(),
             ]);
 
             return response()->json([
                 'success' => true,
                 'message' => 'Email sent successfully!',
-                'to' => $to
+                'to' => $to,
             ]);
 
         } catch (\Illuminate\Validation\ValidationException $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'Validation failed',
-                'errors' => $e->errors()
+                'errors' => $e->errors(),
             ], 422);
         } catch (\Exception $e) {
             Log::error('Send Email Error', [
                 'error' => $e->getMessage(),
                 'to' => $request->input('to'),
-                'subject' => $request->input('subject')
+                'subject' => $request->input('subject'),
             ]);
 
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to send email: ' . $e->getMessage()
+                'message' => 'Failed to send email: '.$e->getMessage(),
             ], 500);
         }
     }
