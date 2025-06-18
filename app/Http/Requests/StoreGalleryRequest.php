@@ -12,11 +12,7 @@ class StoreGalleryRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        if (Auth::check()) {
-            return true;
-        }
-
-        return false;
+        return Auth::check() ? true : false;
     }
 
     /**

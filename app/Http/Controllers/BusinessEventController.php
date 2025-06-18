@@ -2,146 +2,224 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\ClearCache;
+use App\Helpers\DeleteImage;
+use App\Helpers\UploadImage;
+use App\Http\Requests\StoreBusinessEventRequest;
+use App\Http\Requests\UpdateBusinessEventRequest;
+use App\Mail\NewsletterMail;
 use App\Models\BusinessEvent;
+use App\Models\Subscribe;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Crypt;
+use Illuminate\Support\Facades\Mail;
 
 class BusinessEventController extends Controller
 {
-    public function index()
+    public function clientIndex()
     {
-        $businessEvents = BusinessEvent::get()->paginate(10);
+        $page = request()->get('page', 1);
+        $cacheKey = "client_business_events_page_{$page}";
+
+        $businessEvents = Cache::remember($cacheKey, 300, function () {
+            return BusinessEvent::where('status', 'published')
+            ->where('visible', 1)
+            ->paginate(10);
+        });
 
         return response()->json(
             [
                 'status' => 'success',
-                'data' => $businessEvents,
+                'business_events' => $businessEvents,
             ],
             200
         );
     }
 
-    public function store(Request $request)
+    public function index()
     {
-        $request->validate([
-            'title' => 'required|string|max:255',
-            'description' => 'required|string',
-            'image' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
-            'start_date' => 'required|date',
-            'end_date' => 'required|date',
-            'event_type' => 'required|string',
-            'discount' => 'nullable|numeric',
-        ]);
+        $page = request()->get('page', 1);
+        $cacheKey = "business_events_page_{$page}";
 
-        $eventType = $request->input('event_type');
-        $imageUrl = null;
-
-        if ($request->hasFile('image')) {
-            $image = $request->file('image');
-            $imageUrl = $this->uploadImage($image);
-        }
-
-        if ($eventType == 'launching') {
-            $information = [
-                'title' => $request->input('title'),
-                'description' => $request->input('description'),
-            ];
-
-            BusinessEvent::create([
-                'slug' => Str::uuid(),
-                'information' => json_encode($information),
-                'event_type' => $eventType,
-                'image' => $imageUrl,
-                'start_date' => $request->input('start_date'),
-                'end_date' => $request->input('end_date'),
-            ]);
-        }
-
-        if ($eventType == 'promotional') {
-            $information = [
-                'title' => $request->input('title'),
-                'description' => $request->input('description'),
-                'discount' => $request->input('discount'),
-            ];
-
-            BusinessEvent::create([
-                'information' => json_encode($information),
-                'event_type' => $eventType,
-                'image' => $imageUrl,
-            ]);
-        }
-    }
-
-    public function show($uuid)
-    {
-        $businessEvent = BusinessEvent::where('slug', $uuid)->first();
+        $businessEvents = Cache::remember($cacheKey, 300, function () {
+            return BusinessEvent::paginate(10);
+        });
 
         return response()->json(
             [
                 'status' => 'success',
-                'data' => $businessEvent,
-            ], 200);
+                'business_events' => $businessEvents,
+            ],
+            200
+        );
     }
 
-    public function update(Request $request)
+    public function store(StoreBusinessEventRequest $request)
     {
-        $businessEvent = BusinessEvent::where('slug', $request->input('slug'))->first();
-
         $eventType = $request->input('event_type');
-
-        $imageUrl = $businessEvent->image;
-
+        $imageUrl = null;
+        $businessEvent = null;
         if ($request->hasFile('image')) {
             $image = $request->file('image');
-            $imageUrl = $this->uploadImage($image);
+            $imageUrl = (new UploadImage)->uploadImage('business-events', $image);
         }
 
-        if ($eventType == 'launching') {
-            $information = [
+        if ($eventType == 'launching' || $eventType == 'announcement') {
+            $businessEvent = BusinessEvent::create([
                 'title' => $request->input('title'),
+                'slug' => $request->input('slug'),
                 'description' => $request->input('description'),
-            ];
-
-            $businessEvent->update([
-                'information' => json_encode($information),
-                'event_type' => $eventType,
-                'image' => $imageUrl,
+                'event_type' => $request->input('event_type'),
+                'filename' => $imageUrl['filename'],
+                'image' => $imageUrl['path'],
                 'start_date' => $request->input('start_date'),
                 'end_date' => $request->input('end_date'),
+                'status' => $request->input('status'),
+                'cta_link' => env('VITE_APP_URL').'/business-events/'.$request->input('slug'),
+                'cta_label' => $request->input('cta_label'),
+                'visible' => $request->input('visible'),
             ]);
         }
 
         if ($eventType == 'promotional') {
-            $information = [
+            $businessEvent = BusinessEvent::create([
                 'title' => $request->input('title'),
+                'slug' => $request->input('slug'),
                 'description' => $request->input('description'),
-                'discount' => $request->input('discount'),
-            ];
-
-            $businessEvent->update([
-                'information' => json_encode($information),
-                'event_type' => $eventType,
-                'image' => $imageUrl,
+                'event_type' => $request->input('event_type'),
+                'filename' => $imageUrl['filename'],
+                'image' => $imageUrl['path'],
+                'start_date' => $request->input('start_date'),
+                'end_date' => $request->input('end_date'),
+                'status' => $request->input('status'),
+                'cta_link' => config('vite.appUrl').'/business-events/'.$request->input('slug'),
+                'cta_label' => $request->input('cta_label'),
+                'visible' => $request->input('visible'),
+                'discounted_services' => json_decode($request->input('discounted_services')),
             ]);
         }
+
+        if ($businessEvent->status == 'published' && $businessEvent->visible == 1) {
+            $this->sendNewsletter($businessEvent);
+        }
+
+        $this->clearBusinessEventCache();
+
+        return response()->json(
+            [
+                'status' => 'success',
+                'message' => 'Business event created successfully',
+                'business_event' => $businessEvent,
+            ], 200);
+    }
+
+    public function show($slug)
+    {
+        $businessEvent = BusinessEvent::where('slug', $slug)->first();
+
+        return response()->json(
+            [
+                'status' => 'success',
+                'business_event' => $businessEvent,
+            ], 200);
+    }
+
+    public function update(UpdateBusinessEventRequest $request)
+    {
+        $businessEvent = BusinessEvent::where('slug', $request->input('slug'))->first();
+
+        if (! $businessEvent) {
+            return response()->json(
+                [
+                    'status' => 'error',
+                    'message' => 'Business event not found',
+                ], 404);
+        }
+
+        $eventType = $request->input('event_type');
+
+        if ($request->hasFile('image')) {
+            $image = $request->file('image');
+            $imageUrl = (new UploadImage)->uploadImage('business-events', $image);
+            (new DeleteImage)->deleteImage('business-events/'.$businessEvent->filename);
+        } else {
+            $imageUrl = [
+                'filename' => $businessEvent->filename,
+                'path' => $businessEvent->image,
+            ];
+        }
+
+        if ($eventType == 'launching' || $eventType == 'announcement') {
+            $businessEvent->update([
+                'title' => $request->input('title'),
+                'slug' => $request->input('slug'),
+                'description' => $request->input('description'),
+                'event_type' => $request->input('event_type'),
+                'filename' => $imageUrl['filename'],
+                'image' => $imageUrl['path'],
+                'start_date' => $request->input('start_date'),
+                'end_date' => $request->input('end_date'),
+                'status' => $request->input('status'),
+                'cta_link' => env('VITE_APP_URL').'/business-events/'.$request->input('slug'),
+                'cta_label' => $request->input('cta_label'),
+                'visible' => $request->input('visible'),
+            ]);
+        }
+
+        if ($eventType == 'promotional') {
+            $businessEvent->update([
+                'title' => $request->input('title'),
+                'slug' => $request->input('slug'),
+                'description' => $request->input('description'),
+                'event_type' => $request->input('event_type'),
+                'filename' => $imageUrl['filename'],
+                'image' => $imageUrl['path'],
+                'start_date' => $request->input('start_date'),
+                'end_date' => $request->input('end_date'),
+                'status' => $request->input('status'),
+                'cta_link' => env('VITE_APP_URL').'/business-events/'.$request->input('slug'),
+                'cta_label' => $request->input('cta_label'),
+                'visible' => $request->input('visible'),
+                'discounted_services' => json_decode($request->input('discounted_services')),
+            ]);
+        }
+
+        $this->clearBusinessEventCache();
 
         return response()->json(
             [
                 'status' => 'success',
                 'message' => 'Business event updated successfully',
+                'business_event' => $businessEvent,
             ], 200);
     }
 
-    private function uploadImage($image)
+    public function delete($id)
     {
-        // Generate a unique filename with timestamp and original extension
-        $filename = time().'_'.uniqid().'.'.$image->getClientOriginalExtension();
+        $businessEvent = BusinessEvent::where('id', $id)->first();
+        (new DeleteImage)->deleteImage('business-events/'.$businessEvent->filename);
+        $businessEvent->delete();
+        $this->clearBusinessEventCache();
 
-        // Store the image in the gallery directory within the public disk
-        $path = $image->storeAs('business-events', $filename, 'public');
+        return response()->json(['status' => 'success', 'message' => 'Business event deleted successfully'], 200);
+    }
 
-        // Return the URL path that can be used to access the image
-        return url(Storage::url($path));
+    private function clearBusinessEventCache()
+    {
+        (new ClearCache)->clear('business_events_page_');
+    }
+
+    private function sendNewsletter($businessEvent)
+    {
+        $subscribers = Subscribe::where('opt_in', true)->get();
+
+        foreach ($subscribers as $subscriber) {
+            $decryptedEmail = Crypt::decryptString($subscriber->email);
+            
+            Mail::to($decryptedEmail)->send(new NewsletterMail($businessEvent));
+            
+            sleep(2);
+        }
     }
 }

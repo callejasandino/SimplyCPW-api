@@ -7,8 +7,11 @@ use App\Mail\QuoteToUserEmail;
 use App\Models\Quote;
 use App\Models\Service;
 use App\Models\Setting;
+use App\Http\Requests\StoreQuoteRequest;
+use App\Http\Requests\UpdateQuoteRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
 
 class QuoteController extends Controller
@@ -25,22 +28,25 @@ class QuoteController extends Controller
         return response()->json($quotes);
     }
 
-    public function store(Request $request)
+    public function store(StoreQuoteRequest $request)
     {
-        $validated = $request->validate([
-            'firstName' => 'required|string|max:255',
-            'lastName' => 'required|string|max:255',
-            'email' => 'required|email',
-            'phone' => 'required|string|max:255',
-            'address' => 'required|string|max:255',
-            'servicesNeeded' => 'required|array',
-            'additionalInfo' => 'nullable|string|max:255',
-            'agreedToTerms' => 'required|boolean',
+        $response = Http::asForm()->post(config('captcha.url'), [
+            'secret' => config('captcha.secretKey'),
+            'response' => $request->input('gRecaptchaResponse'),
+            'remoteip' => $request->ip(),
         ]);
 
-        $servicesNeeded = $validated['servicesNeeded'];
+        $body = $response->json();
+
+        if (!($body['success'] ?? false)) {
+            return response()->json(['message' => 'Captcha validation failed.'], 422);
+        }
+
+        $servicesNeeded = $request->input('servicesNeeded');
 
         $servicesNames = [];
+
+        $isSubscribed = false;
 
         foreach ($servicesNeeded as $service) {
             $service = Service::where('id', $service)->first();
@@ -48,16 +54,21 @@ class QuoteController extends Controller
         }
 
         $quote = Quote::create([
-            'firstName' => $validated['firstName'],
-            'lastName' => $validated['lastName'],
-            'email' => $validated['email'],
-            'phone' => $validated['phone'],
-            'address' => $validated['address'],
+            'firstName' => $request->input('firstName'),
+            'lastName' => $request->input('lastName'),
+            'email' => $request->input('email'),
+            'phone' => $request->input('phone'),
+            'address' => $request->input('address'),
             'servicesNeeded' => json_encode($servicesNeeded),
-            'additionalInfo' => $validated['additionalInfo'],
+            'additionalInfo' => $request->input('additionalInfo'),
             'status' => 'pending',
-            'agreedToTerms' => $validated['agreedToTerms'],
+            'agreedToTerms' => $request->input('agreedToTerms'),
         ]);
+
+        if ($request->input('optIn')) {
+            $subscribeController = new SubscribeController();
+            $isSubscribed = $subscribeController->subscribe($request->input('email'), true);
+        }
 
         $setting = Setting::first();
 
@@ -81,24 +92,13 @@ class QuoteController extends Controller
         return response()->json([
             'status' => 'success',
             'message' => 'Job Quote created successfully',
+            'isSubscribed' => $isSubscribed,
         ], 201);
     }
 
-    public function update(Request $request)
+    public function update(UpdateQuoteRequest $request)
     {
-        $validated = $request->validate([
-            'firstName' => 'string|max:255',
-            'lastName' => 'string|max:255',
-            'email' => 'email',
-            'phone' => 'string|max:255',
-            'address' => 'string|max:255',
-            'servicesNeeded' => 'array|max:255',
-            'additionalInfo' => 'string|max:255',
-            'status' => 'string|max:255',
-            'agreedToTerms' => 'boolean',
-        ]);
-
-        $servicesNeeded = $validated['servicesNeeded'];
+        $servicesNeeded = $request->input('servicesNeeded');
 
         $services = [];
 
@@ -109,15 +109,15 @@ class QuoteController extends Controller
 
         $quote = Quote::findOrFail($request->id);
         $quote->update([
-            'firstName' => $validated['firstName'],
-            'lastName' => $validated['lastName'],
-            'email' => $validated['email'],
-            'phone' => $validated['phone'],
-            'address' => $validated['address'],
+            'firstName' => $request->input('firstName'),
+            'lastName' => $request->input('lastName'),
+            'email' => $request->input('email'),
+            'phone' => $request->input('phone'),
+            'address' => $request->input('address'),
             'servicesNeeded' => json_encode($services),
-            'additionalInfo' => $validated['additionalInfo'],
-            'status' => $validated['status'],
-            'agreedToTerms' => $validated['agreedToTerms'],
+            'additionalInfo' => $request->input('additionalInfo'),
+            'status' => $request->input('status'),
+            'agreedToTerms' => $request->input('agreedToTerms'),
         ]);
 
         // Clear cache since quote was updated

@@ -8,6 +8,7 @@ use App\Http\Controllers\TestimonialController;
 use App\Http\Controllers\ServiceController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BlogController;
+use App\Http\Controllers\BusinessEventController;
 use App\Http\Controllers\BusinessHoursController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\QuoteController;
@@ -22,6 +23,11 @@ Route::prefix('auth')->group(function () {
 });
 
 Route::prefix('client')->group(function () {
+    Route::prefix('business-events')->group(function () {
+        Route::get('/', [BusinessEventController::class, 'clientIndex']);
+        Route::get('/{slug}', [BusinessEventController::class, 'show']);
+    });
+
     Route::prefix('settings')->group(function () {
         Route::get('/', [SettingController::class, 'index']);
     });
@@ -162,5 +168,13 @@ Route::prefix('admin')
         Route::get('/{uid}', [ImapController::class, 'show']);
         Route::post('/{uid}/reply', [ImapController::class, 'reply']);
         Route::delete('/{uid}', [ImapController::class, 'delete']);
+    });
+
+    Route::prefix('business-events')->group(function () {
+        Route::get('/', [BusinessEventController::class, 'index']);
+        Route::post('/', [BusinessEventController::class, 'store']);
+        Route::get('/{slug}', [BusinessEventController::class, 'show']);
+        Route::post('/update', [BusinessEventController::class, 'update']);
+        Route::delete('/{id}', [BusinessEventController::class, 'delete']);
     });
 });

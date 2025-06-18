@@ -5,7 +5,7 @@ namespace App\Http\Requests;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
 
-class StoreWorkResultRequest extends FormRequest
+class UpdateQuoteRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
@@ -23,10 +23,15 @@ class StoreWorkResultRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'title' => 'required|string',
-            'category' => 'required|string',
-            'before_image' => 'required|image|mimes:jpeg,png,jpg,gif,svg',
-            'after_image' => 'required|image|mimes:jpeg,png,jpg,gif,svg',
+            'firstName' => 'string|max:255',
+            'lastName' => 'string|max:255',
+            'email' => 'email',
+            'phone' => 'string|max:255',
+            'address' => 'string|max:255',
+            'servicesNeeded' => 'array|max:255',
+            'additionalInfo' => 'string|max:255',
+            'status' => 'string|max:255',
+            'agreedToTerms' => 'boolean',
         ];
     }
 }

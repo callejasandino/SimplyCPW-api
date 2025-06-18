@@ -13,13 +13,19 @@ return new class extends Migration
     {
         Schema::create('business_events', function (Blueprint $table) {
             $table->id();
-            $table->json('information');
-            $table->enum('event_type', ['launching', 'promotional']);
-            $table->string('link');
+            $table->string('title');
+            $table->string('slug');
+            $table->text('description');
+            $table->enum('event_type', ['launching', 'promotional', 'announcement']);
+            $table->string('filename')->nullable();
+            $table->string('image');
             $table->dateTime('start_date');
             $table->dateTime('end_date');
-            $table->string('image');
-            $table->string('discount')->nullable();
+            $table->enum('status', ['draft', 'published', 'archived', 'scheduled']);
+            $table->string('cta_link')->nullable();
+            $table->string('cta_label')->nullable();
+            $table->boolean('visible')->default(false);
+            $table->json('discounted_services')->nullable();
             $table->timestamps();
         });
     }
