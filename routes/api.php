@@ -16,6 +16,7 @@ use App\Http\Controllers\EquipmentController;
 use App\Http\Controllers\ImapController;
 use App\Http\Controllers\MemberController;
 use App\Http\Controllers\SettingController;
+use App\Http\Controllers\SubscriberController;
 use App\Http\Controllers\WorkResultController;
 
 Route::prefix('auth')->group(function () {
@@ -23,9 +24,15 @@ Route::prefix('auth')->group(function () {
 });
 
 Route::prefix('client')->group(function () {
+
+    Route::post('/subscribe', [SubscriberController::class, 'subscribe']);
+    Route::post('/unsubscribe', [SubscriberController::class, 'unsubscribe']);
+    
     Route::prefix('business-events')->group(function () {
         Route::get('/', [BusinessEventController::class, 'clientIndex']);
         Route::get('/{slug}', [BusinessEventController::class, 'show']);
+        Route::get('/{slug}/discounted-services', [BusinessEventController::class, 'showDiscountedServices']);
+        Route::post('/process-booking', [BusinessEventController::class, 'processClientBooking']);
     });
 
     Route::prefix('settings')->group(function () {
@@ -112,7 +119,7 @@ Route::prefix('admin')
         Route::get('/', [ServiceController::class, 'index']);
         Route::post('/', [ServiceController::class, 'store']);
         Route::post('/update', [ServiceController::class, 'update']);
-        Route::delete('/{id}', [ServiceController::class, 'destroy']);
+        Route::delete('/{slug}', [ServiceController::class, 'destroy']);
     });
 
     Route::prefix('testimonials')->group(function () {
@@ -175,6 +182,6 @@ Route::prefix('admin')
         Route::post('/', [BusinessEventController::class, 'store']);
         Route::get('/{slug}', [BusinessEventController::class, 'show']);
         Route::post('/update', [BusinessEventController::class, 'update']);
-        Route::delete('/{id}', [BusinessEventController::class, 'delete']);
+        Route::delete('/{id}', [BusinessEventController::class, 'delete']); 
     });
 });

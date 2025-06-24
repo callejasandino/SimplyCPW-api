@@ -17,10 +17,12 @@ class NewQuoteMail extends Mailable implements ShouldQueue
      * Create a new message instance.
      */
     public $quote;
+    public $settingEmail;
 
-    public function __construct($quote)
+    public function __construct($quote, $settingEmail)
     {
         $this->quote = $quote;
+        $this->settingEmail = $settingEmail;
     }
 
     /**
@@ -31,7 +33,7 @@ class NewQuoteMail extends Mailable implements ShouldQueue
         return new Envelope(
             subject: 'New Quote Request from ' . $this->quote['firstName'] . ' ' . $this->quote['lastName'],
             from: $this->quote['email'],
-            replyTo: env('INFO_EMAIL'),
+            replyTo: $this->settingEmail,
         );
     }
 

@@ -9,7 +9,7 @@ use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 
-class QuoteToUserEmail extends Mailable implements ShouldQueue
+class UserQuoteMail extends Mailable implements ShouldQueue
 {
     use Queueable, SerializesModels;
 
@@ -18,10 +18,12 @@ class QuoteToUserEmail extends Mailable implements ShouldQueue
      */
 
     public $quote;
+    public $settingEmail;
 
-    public function __construct($quote)
+    public function __construct($quote, $settingEmail)
     {
         $this->quote = $quote;
+        $this->settingEmail = $settingEmail;
     }
 
     /**
@@ -31,7 +33,7 @@ class QuoteToUserEmail extends Mailable implements ShouldQueue
     {
         return new Envelope(
             subject: 'Your Quote Request from ' . $this->quote['setting']->company_name,
-            from: env('INFO_EMAIL'),
+            from: $this->settingEmail,
         );
     }
 

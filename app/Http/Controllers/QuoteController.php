@@ -2,13 +2,15 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\EncryptEmail;
 use App\Mail\NewQuoteMail;
-use App\Mail\QuoteToUserEmail;
+use App\Mail\UserQuoteMail;
 use App\Models\Quote;
 use App\Models\Service;
 use App\Models\Setting;
 use App\Http\Requests\StoreQuoteRequest;
 use App\Http\Requests\UpdateQuoteRequest;
+use App\Models\Subscriber;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
@@ -66,8 +68,7 @@ class QuoteController extends Controller
         ]);
 
         if ($request->input('optIn')) {
-            $subscribeController = new SubscribeController();
-            $isSubscribed = $subscribeController->subscribe($request->input('email'), true);
+            $this->subscribe($request->input('email'));
         }
 
         $setting = Setting::first();
@@ -82,9 +83,10 @@ class QuoteController extends Controller
             'setting' => $setting,
         ];
 
-        Mail::to($quote->email)->send(new QuoteToUserEmail($quoteMail));
+        
+        Mail::to($quote->email)->send(new UserQuoteMail($quoteMail, $setting->company_email));
 
-        Mail::to(env('INFO_EMAIL'))->send(new NewQuoteMail($quoteMail));
+        Mail::to($setting->company_email)->send(new NewQuoteMail($quoteMail, $setting->company_email));
 
         // Clear cache since new quote was created
         $this->clearQuoteCache();
@@ -152,6 +154,24 @@ class QuoteController extends Controller
         // Clear multiple pages of cache (assuming up to 100 pages)
         for ($page = 1; $page <= 100; $page++) {
             Cache::forget("pending_quotes_page_{$page}");
+        }
+    }
+
+    private function subscribe($email)
+    {
+        $emailHash = (new EncryptEmail())->checkIfSubscriberExists($email);
+
+        if (isset($emailHash['email_hash']) && isset($emailHash['encrypted_email'])) {
+            Subscriber::create([
+                'email' => $emailHash['encrypted_email'],
+                'email_hash' => $emailHash['email_hash'],
+                'options' => ['Promotional', 'Launching', 'Announcement'],
+                'opt_in' => true
+            ]);
+
+            return true;
+        } else if (!empty($emailHash['saved_email_hash'])) {
+            return false;
         }
     }
 }

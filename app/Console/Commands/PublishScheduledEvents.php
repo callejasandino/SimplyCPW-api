@@ -2,13 +2,18 @@
 
 namespace App\Console\Commands;
 
+use App\Jobs\SendNewsletterEmail;
 use App\Mail\NewsletterMail;
 use App\Models\BusinessEvent;
-use App\Models\Subscribe;
+use App\Models\Subscriber;
 use Carbon\Carbon;
+use Illuminate\Bus\Batch;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Crypt;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use Throwable;
 
 class PublishScheduledEvents extends Command
 {
@@ -17,32 +22,32 @@ class PublishScheduledEvents extends Command
 
     public function handle()
     {
-        $now = Carbon::now();
+        $now = Carbon::now(); // assumes config('app.timezone') is Asia/Manila
 
-        $businessEvents = BusinessEvent::where('status', 'scheduled')
-        ->where('visible', 1)
-        ->get();
+        $businessEvents = BusinessEvent::where('visible', 1)
+            ->get();
 
         foreach ($businessEvents as $businessEvent) {
             $startDate = Carbon::parse($businessEvent->start_date);
             $endDate = Carbon::parse($businessEvent->end_date);
 
-            // Option A: Only if now >= start date
-            // if ($now->greaterThanOrEqualTo($startDate)) {
+            $startWindow = $startDate->copy()->subMinutes(10);
+            $endWindow = $startDate->copy()->addMinutes(10);
 
-            // Option B: If now is within 5 minutes of start_date
-            if ($now->between($startDate->copy()->subMinutes(5), $startDate->copy()->addMinutes(5))) {
+            $this->info("Checking event: {$businessEvent->title}");
+            $this->info("Now: {$now->format('Y-m-d H:i:s')}, Start: {$startDate->format('Y-m-d H:i:s')}, Window: {$startWindow->format('Y-m-d H:i:s')} to {$endWindow->format('Y-m-d H:i:s')}");
+
+            if ($businessEvent->status === 'scheduled' && $now->between($startWindow, $endWindow)) {
                 $businessEvent->status = 'published';
-                $businessEvent->published_at = $now;
                 $businessEvent->save();
 
-                $this->sendNewsletter($businessEvent);
+                $this->sendNewsletter($businessEvent, $businessEvent->event_type);
 
                 $this->info("Published and sent newsletter: {$businessEvent->title}");
             }
 
-            if ($now->greaterThanOrEqualTo($endDate)) {
-                $businessEvent->status = 'scheduled';
+            if ($businessEvent->status === 'published' && $now->greaterThanOrEqualTo($endDate)) {
+                $businessEvent->status = 'archived';
                 $businessEvent->visible = 0;
                 $businessEvent->save();
 
@@ -53,16 +58,27 @@ class PublishScheduledEvents extends Command
         $this->info('Finished checking scheduled events.');
     }
 
-    private function sendNewsletter($businessEvent)
-    {
-        $subscribers = Subscribe::where('opt_in', true)->get();
 
-        foreach ($subscribers as $subscriber) {
-            $decryptedEmail = Crypt::decryptString($subscriber->email);
-            
-            Mail::to($decryptedEmail)->send(new NewsletterMail($businessEvent));
-            
-            sleep(2);
-        }
+
+
+    private function sendNewsletter($businessEvent, $eventType)
+    {
+        $subcribers = Subscriber::where('opt_in', true)->whereJsonContains('options', $eventType)->get();
+
+        Bus::batch(
+            $subcribers->map(fn ($subcriber) => new SendNewsletterEmail($subcriber->email, $businessEvent))
+        )->then(function (Batch $batch) {
+            // All jobs completed successfully
+            Log::info('Newsletter batch completed!', ['batch_id' => $batch->id]);
+        })
+        ->catch(function (Throwable $e) {
+            // One or more jobs failed
+            Log::error('Newsletter batch failed.', ['error' => $e->getMessage()]);
+        })
+        ->finally(function () {
+            // Always executed at the end
+            Log::info('Newsletter batch has finished processing.');
+        })
+        ->dispatch();
     }
 }

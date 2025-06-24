@@ -24,7 +24,6 @@ class StoreBusinessEventRequest extends FormRequest
     {
         return [
             'title' => 'required|string|max:255',
-            'slug' => 'required|string|max:255',
             'description' => 'required|string',
             'event_type' => 'required|in:launching,promotional,announcement',
             'image' => 'required|image|mimes:jpeg,png,jpg,gif,svg',

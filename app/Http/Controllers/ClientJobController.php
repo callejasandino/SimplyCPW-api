@@ -2,12 +2,16 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\ClearCache;
+use App\Http\Requests\StoreClientJobRequest;
+use App\Http\Requests\UpdateClientJobRequest;
 use App\Mail\JobCreatedMail;
 use App\Models\ClientJob;
 use App\Models\Equipment;
 use App\Models\Member;
 use App\Models\Service;
 use App\Models\Setting;
+use Carbon\Carbon;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -100,34 +104,23 @@ class ClientJobController extends Controller
         ]);
     }
 
-    public function store(Request $request)
+    public function store(StoreClientJobRequest $request)
     {
-        try {
-            $validated = $request->validate([
-                'title' => 'required|string|max:255',
-                'client' => 'required',
-                'date' => 'required|date',
-                'duration' => 'required|integer',
-                'status' => 'required|string|in:Scheduled,Pending,Confirmed,Completed,Cancelled',
-                'price' => 'required|numeric',
-                'notes' => 'string|nullable',
-                'services' => 'array|nullable',
-                'team' => 'array|nullable',
-                'equipment' => 'array|nullable',
-            ]);
+        $settingEmail = Setting::select('company_email')->first();
 
+        try {
             $clientJob = ClientJob::create([
                 'slug' => Str::uuid(),
-                'title' => $validated['title'],
-                'client' => $validated['client'],
-                'date' => $validated['date'],
-                'duration' => $validated['duration'],
-                'status' => $validated['status'],
-                'price' => $validated['price'],
-                'notes' => $validated['notes'],
-                'services' => $validated['services'],
-                'team' => $validated['team'],
-                'equipment' => $validated['equipment'],
+                'title' => $request->title,
+                'client' => $request->client,
+                'date' => $request->date,
+                'duration' => $request->duration,
+                'status' => $request->status,
+                'price' => $request->price,
+                'notes' => $request->notes,
+                'services' => $request->services,
+                'team' => $request->team,
+                'equipment' => $request->equipment,
             ]);
 
             $client = $clientJob->client;
@@ -136,9 +129,10 @@ class ClientJobController extends Controller
                 'name' => $client['firstName'].' '.$client['lastName'],
                 'email' => $client['email'] ?? null,
                 'address' => $client['address'],
-                'date' => $validated['date'],
-                'duration' => $validated['duration'],
-                'information_link' => env('VITE_APP_NAME').'/job/'.$clientJob->slug,
+                'date' => Carbon::parse($request->date)->format('d-m-Y h:i A'),
+                'duration' => $request->duration,
+                'information_link' => config('vite.appUrl').'/job/'.$clientJob->slug,
+                'from_email' => $settingEmail->company_email,
             ];
 
             Mail::to($jobMail['email'])->send(new JobCreatedMail($jobMail));
@@ -160,25 +154,22 @@ class ClientJobController extends Controller
         }
     }
 
-    public function update(Request $request)
+    public function update(UpdateClientJobRequest $request)
     {
         try {
-            $validated = $request->validate([
-                'uuid' => 'required|string|max:255',
-                'title' => 'string|max:255|nullable',
-                'client' => 'array|nullable',
-                'date' => 'date|nullable',
-                'duration' => 'integer|nullable',
-                'status' => 'string|in:Scheduled,Pending,Confirmed,Completed,Cancelled',
-                'price' => 'numeric|nullable',
-                'notes' => 'string|nullable',
-                'services' => 'array|nullable',
-                'team' => 'array|nullable',
-                'equipment' => 'array|nullable',
+            $clientJob = ClientJob::where('slug', $request->input('uuid'))->firstOrFail();
+            $clientJob->update([
+                'title' => $request->input('title'),
+                'client' => $request->input('client'),
+                'date' => $request->input('date'),
+                'duration' => $request->input('duration'),
+                'status' => $request->input('status'),
+                'price' => $request->input('price'),
+                'notes' => $request->input('notes'),
+                'services' => $request->input('services'),
+                'team' => $request->input('team'),
+                'equipment' => $request->input('equipment'),
             ]);
-
-            $clientJob = ClientJob::where('slug', $validated['uuid'])->firstOrFail();
-            $clientJob->update($validated);
 
             $this->clearClientJobCache();
 
@@ -221,8 +212,6 @@ class ClientJobController extends Controller
     private function clearClientJobCache()
     {
         // Clear multiple pages of cache (assuming up to 100 pages)
-        for ($page = 1; $page <= 100; $page++) {
-            Cache::forget("client_jobs_page_{$page}");
-        }
+        (new ClearCache)->clear('client_jobs_page_');
     }
 }

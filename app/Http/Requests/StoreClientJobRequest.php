@@ -5,7 +5,7 @@ namespace App\Http\Requests;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
 
-class UpdateBusinessEventRequest extends FormRequest
+class StoreClientJobRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
@@ -24,14 +24,15 @@ class UpdateBusinessEventRequest extends FormRequest
     {
         return [
             'title' => 'required|string|max:255',
-            'description' => 'required|string',
-            'event_type' => 'required|in:launching,promotional,announcement',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg',
-            'start_date' => 'nullable|date_format:Y-m-d H:i:s',
-            'end_date' => 'nullable|date_format:Y-m-d H:i:s',
-            'status' => 'required|in:draft,published,archived,scheduled',
-            'cta_label' => 'required|string|max:255',
-            'discounted_services' => 'nullable|json',
+            'client' => 'required',
+            'date' => 'required|date',
+            'duration' => 'required|integer',
+            'status' => 'required|string|in:Scheduled,Pending,Confirmed,Completed,Cancelled',
+            'price' => 'required|numeric',
+            'notes' => 'string|nullable',
+            'services' => 'array|nullable',
+            'team' => 'array|nullable',
+            'equipment' => 'array|nullable',
         ];
     }
 }

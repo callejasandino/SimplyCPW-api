@@ -139,7 +139,7 @@
             <ul>
                 <li>Our team will contact you 24-48 hours before the scheduled date to confirm the appointment</li>
                 <li>Please ensure someone is available at the service address during the scheduled time</li>
-                <li>If you need to reschedule or have any questions, please use the link above to access your job details</li>
+                <li>If you need to reschedule or have any questions, please send us an email at <a href="mailto:{{ $job['from_email'] }}">{{ $job['from_email'] }}</a> or use the link above to access your job details</li>
             </ul>
 
             <p>Thank you for choosing our services. We look forward to providing you with excellent service.</p>

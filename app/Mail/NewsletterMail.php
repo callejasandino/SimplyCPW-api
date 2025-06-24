@@ -30,7 +30,7 @@ class NewsletterMail extends Mailable implements ShouldQueue
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Newsletter Mail',
+            subject: '🎉 SimplyCPW - ' . $this->businessEvent->title,
         );
     }
 

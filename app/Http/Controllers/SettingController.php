@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Setting;
-use helpers\UploadImage;
+use App\Helpers\UploadImage;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
