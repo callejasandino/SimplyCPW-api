@@ -7,13 +7,11 @@ use App\Http\Requests\StoreClientJobRequest;
 use App\Http\Requests\UpdateClientJobRequest;
 use App\Mail\JobCreatedMail;
 use App\Models\ClientJob;
-use App\Models\Equipment;
 use App\Models\Member;
 use App\Models\Service;
 use App\Models\Setting;
 use Carbon\Carbon;
 use Exception;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
@@ -41,36 +39,24 @@ class ClientJobController extends Controller
     {
         $clientJob = ClientJob::where('slug', $slug)->firstOrFail()->makeHidden(['id', 'slug', 'created_at', 'updated_at', 'client.id', 'client.phone']);
 
-        $settings = Setting::select([
-            'company_facebook',
-            'company_instagram',
-            'company_twitter',
-            'company_linkedin',
-            'company_youtube',
-            'company_tiktok',
-            'company_pinterest',
-            'company_name',
-            'company_address',
-            'company_phone',
-            'company_email',
-            'company_logo',
-        ])->first();
+        // $settings = Setting::select([
+        //     'company_facebook',
+        //     'company_instagram',
+        //     'company_twitter',
+        //     'company_linkedin',
+        //     'company_youtube',
+        //     'company_tiktok',
+        //     'company_pinterest',
+        //     'company_name',
+        //     'company_address',
+        //     'company_phone',
+        //     'company_email',
+        //     'company_logo',
+        // ])->first();
 
         $services = $clientJob->services;
         $serviceNames = [];
-        $equipementNames = [];
         $memberNames = [];
-
-        $equipements = $clientJob->equipment;
-
-        if ($equipements) {
-            foreach ($equipements as $equipement) {
-                $equipement = Equipment::where('id', $equipement)->first();
-                if ($equipement) {
-                    $equipementNames[] = $equipement->name;
-                }
-            }
-        }
 
         if ($services) {
             foreach ($services as $service) {
@@ -94,19 +80,18 @@ class ClientJobController extends Controller
         }
 
         $clientJob->services = $serviceNames;
-        $clientJob->equipment = $equipementNames;
         $clientJob->team = $memberNames;
 
         return response()->json([
             'status' => 'success',
             'clientJob' => $clientJob,
-            'settings' => $settings,
+            // 'settings' => $settings,
         ]);
     }
 
     public function store(StoreClientJobRequest $request)
     {
-        $settingEmail = Setting::select('company_email')->first();
+        // $settingEmail = Setting::select('company_email')->first();
 
         try {
             $clientJob = ClientJob::create([
@@ -120,7 +105,6 @@ class ClientJobController extends Controller
                 'notes' => $request->notes,
                 'services' => $request->services,
                 'team' => $request->team,
-                'equipment' => $request->equipment,
             ]);
 
             $client = $clientJob->client;
@@ -168,7 +152,6 @@ class ClientJobController extends Controller
                 'notes' => $request->input('notes'),
                 'services' => $request->input('services'),
                 'team' => $request->input('team'),
-                'equipment' => $request->input('equipment'),
             ]);
 
             $this->clearClientJobCache();

@@ -13,11 +13,12 @@ return new class extends Migration
     {
         Schema::create('members', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('shop_id')->constrained('shops');
             $table->string('name');
             $table->string('email');
             $table->string('contact_number');
-            $table->string('image');
-
+            $table->string('filename');
+            $table->string('path');
             $table->timestamps();
         });
     }

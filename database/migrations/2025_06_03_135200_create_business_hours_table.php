@@ -13,6 +13,7 @@ return new class extends Migration
     {
         Schema::create('business_hours', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('shop_id')->constrained('shops');
             $table->json('hours');
             $table->timestamps();
         });

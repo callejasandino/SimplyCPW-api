@@ -11,16 +11,17 @@ class EncryptEmail
     {
         $emailHash = hash_hmac('sha256', $email, config('app.key'));
 
-        $isSubscriberExisting = Subscriber::where('email_hash', $emailHash)->first();
+        $subscriber = Subscriber::where('email_hash', $emailHash)->first();
 
-        if (! $isSubscriberExisting) {
+        if (! $subscriber) {
             return [
                 'email_hash' => $emailHash,
                 'encrypted_email' => Crypt::encryptString($email),
             ];
         } else {
             return [
-                'saved_email_hash' => $isSubscriberExisting->email_hash,
+                'saved_email_hash' => $subscriber->email_hash,
+                'subscriber' => $subscriber,
             ];
         }
     }

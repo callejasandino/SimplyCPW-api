@@ -23,6 +23,7 @@ class StoreBlogRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'shop_uuid' => 'required|string|max:255',
             'title' => 'required|string|max:255',
             'content' => 'required|string',
             'image' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:2048',

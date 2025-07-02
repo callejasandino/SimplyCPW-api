@@ -13,6 +13,7 @@ use App\Models\BusinessEvent;
 use App\Models\ClientJob;
 use App\Models\Service;
 use App\Models\Setting;
+use App\Models\Shop;
 use App\Models\Subscriber;
 use Carbon\Carbon;
 use Illuminate\Bus\Batch;
@@ -27,15 +28,23 @@ use Throwable;
 
 class BusinessEventController extends Controller
 {
-    public function clientIndex()
+    public function clientIndex($shop_uuid)
     {
+        $shop = Shop::where('uuid', $shop_uuid)->first();
+
+        if (! $shop) {
+            return response()->json([
+                'message' => 'Shop not found',
+            ], 404);
+        }
+
         $page = request()->get('page', 1);
         $cacheKey = "client_business_events_page_{$page}";
 
         $businessEvents = Cache::remember($cacheKey, 300, function () {
             return BusinessEvent::where('status', 'published')
-            ->where('visible', 1)
-            ->paginate(10);
+                ->where('visible', 1)
+                ->paginate(10);
         });
 
         return response()->json(
@@ -272,14 +281,14 @@ class BusinessEventController extends Controller
 
         $body = $response->json();
 
-        if (!($body['success'] ?? false)) {
+        if (! ($body['success'] ?? false)) {
             return response()->json(['message' => 'Captcha validation failed.'], 422);
         }
 
         $settingEmail = Setting::select('company_email')->first();
 
-        $title = 'Job for '. $request->input('last_name') . ' ' . $request->input('first_name');
-        
+        $title = 'Job for '.$request->input('last_name').' '.$request->input('first_name');
+
         $servicesIds = [];
 
         $client = [
@@ -345,14 +354,14 @@ class BusinessEventController extends Controller
             // All jobs completed successfully
             Log::info('Newsletter batch completed!', ['batch_id' => $batch->id]);
         })
-        ->catch(function (Throwable $e) {
-            // One or more jobs failed
-            Log::error('Newsletter batch failed.', ['error' => $e->getMessage()]);
-        })
-        ->finally(function () {
-            // Always executed at the end
-            Log::info('Newsletter batch has finished processing.');
-        })
-        ->dispatch();
+            ->catch(function (Throwable $e) {
+                // One or more jobs failed
+                Log::error('Newsletter batch failed.', ['error' => $e->getMessage()]);
+            })
+            ->finally(function () {
+                // Always executed at the end
+                Log::info('Newsletter batch has finished processing.');
+            })
+            ->dispatch();
     }
 }

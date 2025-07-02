@@ -13,6 +13,7 @@ return new class extends Migration
     {
         Schema::create('client_jobs', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('shop_id')->constrained('shops');
             $table->string('title');
             $table->json('client');
             $table->dateTime('date');
@@ -22,7 +23,6 @@ return new class extends Migration
             $table->string('notes')->nullable();
             $table->json('services')->nullable();
             $table->json('team')->nullable();
-            $table->json('equipment')->nullable();
             $table->timestamps();
         });
     }

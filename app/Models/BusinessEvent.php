@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class BusinessEvent extends Model
 {
     protected $fillable = [
+        'shop_id',
         'title',              // e.g. "4th of July Sale"
         'slug',               // e.g. "4th-of-july-sale"
         'description',        // Long-form description
@@ -28,6 +29,7 @@ class BusinessEvent extends Model
 
     protected $hidden = [
         'id',
+        'shop_id',
         'filename',
         'created_at',
         'updated_at',

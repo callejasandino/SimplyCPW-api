@@ -23,8 +23,8 @@ class StoreGalleryRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'shop_uuid' => 'required|string|exists:shops,uuid',
             'image' => 'required|image|mimes:jpeg,png,jpg,gif,svg',
-            'category' => 'required|string',
             'description' => 'string|nullable',
         ];
     }

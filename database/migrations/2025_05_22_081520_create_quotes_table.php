@@ -13,6 +13,7 @@ return new class extends Migration
     {
         Schema::create('quotes', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('shop_id')->constrained('shops');
             $table->string('firstName');
             $table->string('lastName');
             $table->string('email');

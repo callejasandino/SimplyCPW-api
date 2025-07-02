@@ -23,6 +23,7 @@ class StoreServiceRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'shop_uuid' => 'required|string|exists:shops,uuid',
             'name' => 'required|string|max:255',
             'description' => 'required|string',
             'price' => 'required|numeric|min:0',

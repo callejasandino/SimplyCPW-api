@@ -2,43 +2,25 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\BusinessHour;
+use App\Repositories\BusinessHoursRepository;
 use Illuminate\Http\Request;
 
 class BusinessHoursController extends Controller
 {
-    public function index()
-    {
-        $businessHours = BusinessHour::first();
+    private BusinessHoursRepository $businessHoursRepository;
 
-        return response()->json([
-            'status' => 'success',
-            'data' => $businessHours,
-        ], 200);
+    public function __construct(BusinessHoursRepository $businessHoursRepository)
+    {
+        $this->businessHoursRepository = $businessHoursRepository;
+    }
+
+    public function show($shop_uuid)
+    {
+        return $this->businessHoursRepository->show($shop_uuid);
     }
 
     public function store(Request $request)
     {
-
-        $request->validate([
-            'hours' => 'required|array',
-        ]);
-
-        $businessHours = BusinessHour::first();
-
-        if ($businessHours) {
-            $businessHours->update([
-                'hours' => json_encode($request->input('hours')),
-            ]);
-        } else {
-            BusinessHour::create([
-                'hours' => json_encode($request->input('hours')),
-            ]);
-        }
-
-        return response()->json([
-            'status' => 'success',
-            'message' => 'Business hours created successfully',
-        ], 201);
+        return $this->businessHoursRepository->store($request);
     }
 }

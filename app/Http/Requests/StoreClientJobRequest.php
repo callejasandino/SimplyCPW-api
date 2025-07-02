@@ -32,7 +32,6 @@ class StoreClientJobRequest extends FormRequest
             'notes' => 'string|nullable',
             'services' => 'array|nullable',
             'team' => 'array|nullable',
-            'equipment' => 'array|nullable',
         ];
     }
 }

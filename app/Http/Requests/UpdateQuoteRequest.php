@@ -23,6 +23,8 @@ class UpdateQuoteRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'shop_uuid' => 'required|string|exists:shops,uuid',
+            'id' => 'required|integer',
             'firstName' => 'string|max:255',
             'lastName' => 'string|max:255',
             'email' => 'email',

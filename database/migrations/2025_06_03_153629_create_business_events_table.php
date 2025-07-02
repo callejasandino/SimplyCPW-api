@@ -13,6 +13,7 @@ return new class extends Migration
     {
         Schema::create('business_events', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('shop_id')->constrained('shops');
             $table->string('title');
             $table->string('slug');
             $table->text('description');

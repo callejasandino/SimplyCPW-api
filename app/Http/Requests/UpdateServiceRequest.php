@@ -24,10 +24,11 @@ class UpdateServiceRequest extends FormRequest
     {
         return [
             'id' => 'required|string',
+            'shop_uuid' => 'required|string|exists:shops,uuid',
             'name' => 'required|string|max:255',
             'description' => 'required|string',
             'price' => 'required|numeric|min:0',
-            'image' => 'nullable|sometimes',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg',
             'duration' => 'required|string',
         ];
     }

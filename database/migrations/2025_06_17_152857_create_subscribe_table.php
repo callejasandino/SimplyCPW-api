@@ -13,6 +13,7 @@ return new class extends Migration
     {
         Schema::create('subscribe', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('shop_id')->constrained('shops');
             $table->string('email');
             $table->boolean('opt_in')->default(false);
             $table->timestamps();

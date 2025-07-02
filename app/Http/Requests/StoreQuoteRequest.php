@@ -12,7 +12,7 @@ class StoreQuoteRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return true;
+        return Auth::check() ? true : false;
     }
 
     /**
@@ -23,6 +23,7 @@ class StoreQuoteRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'shop_uuid' => 'required|string|exists:shops,uuid',
             'firstName' => 'required|string|max:255',
             'lastName' => 'required|string|max:255',
             'email' => 'required|email',

@@ -13,6 +13,7 @@ return new class extends Migration
     {
         Schema::create('dashboard_data', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('shop_id')->constrained('shops');
             $table->json('stats')->nullable();
             $table->json('monthlyData')->nullable();
             $table->json('serviceDistribution')->nullable();
