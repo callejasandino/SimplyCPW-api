@@ -26,9 +26,7 @@ class GalleriesRepository implements GalleriesInterface
         $page = request()->get('page', 1);
         $cacheKey = "galleries_page_{$page}_shop_{$shop->id}";
 
-        $galleries = Cache::remember($cacheKey, 300, function () use ($shop) {
-            return Gallery::where('shop_id', $shop->id)->paginate(10);
-        });
+        $galleries = Cache::remember($cacheKey, 300, fn () => Gallery::where('shop_id', $shop->id)->paginate(10));
 
         return ApiResponse::success([
             'galleries' => $galleries,

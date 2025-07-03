@@ -126,6 +126,14 @@ class ShopsRepository implements ShopsInterfaces
 
         (new DeleteImage)->deleteImage('shops/'.$shop->filename);
 
+        $shop->blogs()->delete();
+        $shop->members()->delete();
+        $shop->galleries()->delete();
+        $shop->services()->delete();
+        $shop->businessHour()->delete();
+        $shop->quotes()->delete();
+        $shop->subscribers()->delete();
+
         $shop->delete();
 
         $this->clearShopCache($authUser);

@@ -4,35 +4,37 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreServiceRequest;
 use App\Http\Requests\UpdateServiceRequest;
+use App\Http\Requests\UUIDPageRequest;
 use App\Interfaces\ServicesInterface;
+use App\Repositories\ServicesRepository;
 use Illuminate\Http\JsonResponse;
 
 class ServicesController extends Controller
 {
-    public function __construct(private ServicesInterface $servicesInterface) {}
+    private ServicesRepository $servicesRepository;
 
-    public function index(string $shop_uuid): JsonResponse
+    public function __construct(ServicesRepository $servicesRepository)
     {
-        return $this->servicesInterface->index($shop_uuid);
+        $this->servicesRepository = $servicesRepository;
     }
 
-    public function show(string $shop_uuid, string $slug): JsonResponse
+    public function index(UUIDPageRequest $request): JsonResponse
     {
-        return $this->servicesInterface->show($shop_uuid, $slug);
+        return $this->servicesRepository->index($request);
     }
 
     public function store(StoreServiceRequest $request): JsonResponse
     {
-        return $this->servicesInterface->store($request);
+        return $this->servicesRepository->store($request);
     }
 
     public function update(UpdateServiceRequest $request): JsonResponse
     {
-        return $this->servicesInterface->update($request);
+        return $this->servicesRepository->update($request);
     }
 
-    public function destroy(string $shop_uuid, string $slug): JsonResponse
+    public function destroy(string $shop_uuid, string $id): JsonResponse
     {
-        return $this->servicesInterface->destroy($shop_uuid, $slug);
+        return $this->servicesRepository->destroy($shop_uuid, $id);
     }
 }

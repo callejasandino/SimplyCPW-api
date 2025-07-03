@@ -68,7 +68,7 @@ class Shop extends Model
         return $this->hasMany(Service::class, 'shop_id', 'id');
     }
 
-    public function businessHours(): HasOne
+    public function businessHour(): HasOne
     {
         return $this->hasOne(BusinessHour::class, 'shop_id', 'id');
     }

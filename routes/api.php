@@ -111,13 +111,12 @@ Route::prefix('admin')
         Route::delete('/{id}', [GalleriesController::class, 'destroy']);
     });
 
-    // Route::prefix('services')->group(function () {
-    //     Route::get('/{id}', [ServicesController::class, 'show']);
-    //     Route::get('/', [ServicesController::class, 'index']);
-    //     Route::post('/', [ServicesController::class, 'store']);
-    //     Route::post('/update', [ServicesController::class, 'update']);
-    //     Route::delete('/{slug}', [ServicesController::class, 'destroy']);
-    // });
+    Route::prefix('services')->group(function () {
+        Route::get('/', [ServicesController::class, 'index']);
+        Route::post('/', [ServicesController::class, 'store']);
+        Route::post('/update', [ServicesController::class, 'update']);
+        Route::delete('/{shop_uuid}/{id}', [ServicesController::class, 'destroy']);
+    });
 
     // Route::prefix('testimonials')->group(function () {
     //     Route::get('/', [TestimonialController::class, 'index']);

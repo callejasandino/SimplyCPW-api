@@ -8,6 +8,7 @@ use App\Helpers\DeleteImage;
 use App\Helpers\UploadImage;
 use App\Http\Requests\StoreServiceRequest;
 use App\Http\Requests\UpdateServiceRequest;
+use App\Http\Requests\UUIDPageRequest;
 use App\Interfaces\ServicesInterface;
 use App\Models\Service;
 use App\Models\Shop;
@@ -16,28 +17,33 @@ use Illuminate\Support\Facades\Cache;
 
 class ServicesRepository implements ServicesInterface
 {
-    public function index(string $shop_uuid): JsonResponse
+    public function index(UUIDPageRequest $request): JsonResponse
     {
-        $page = request()->get('page', 1);
-        $cacheKey = "services_page_{$page}_{$shop_uuid}";
-
-        $services = Cache::remember($cacheKey, 300, fn () => Service::where('shop_uuid', $shop_uuid)->paginate(10)
-        );
-
-        return ApiResponse::success(['services' => $services], 'Services fetched successfully');
-    }
-
-    public function show(string $shop_uuid, string $slug): JsonResponse
-    {
-        $service = Service::where('shop_uuid', $shop_uuid)
-            ->where('slug', $slug)
-            ->first();
-
-        if (! $service) {
-            return ApiResponse::error('Service not found', 404);
+        $shop = $this->getShopByUuid($request->input('shop_uuid'));
+        if (! $shop) {
+            return ApiResponse::error('Shop not found', 404);
         }
 
-        return ApiResponse::success(['service' => $service], 'Service fetched successfully');
+        $page = $request->input('page', 1);
+        $search = $request->input('search');
+        $cacheKey = "services_page_{$page}_shop_{$shop->id}";
+
+        $services = Cache::remember($cacheKey, 300, function () use ($shop, $search) {
+            $query = Service::where('shop_id', $shop->id);
+            
+            if ($search) {
+                $query->where(function ($q) use ($search) {
+                    $q->where('name', 'like', "%{$search}%")
+                      ->orWhere('description', 'like', "%{$search}%")
+                      ->orWhere('price', 'like', "%{$search}%")
+                      ->orWhere('duration', 'like', "%{$search}%");
+                });
+            }
+            
+            return $query->orderBy('created_at', 'desc')->paginate(10);
+        });
+
+        return ApiResponse::success(['services' => $services], 'Services fetched successfully');
     }
 
     public function store(StoreServiceRequest $request): JsonResponse
@@ -54,7 +60,7 @@ class ServicesRepository implements ServicesInterface
             'name' => $request->input('name'),
             'description' => $request->input('description'),
             'price' => $request->input('price'),
-            'image' => $image['path'],
+            'path' => $image['path'],
             'filename' => $image['filename'],
             'duration' => $request->input('duration'),
         ]);
@@ -101,7 +107,7 @@ class ServicesRepository implements ServicesInterface
         return ApiResponse::success(['service' => $service], 'Service updated successfully');
     }
 
-    public function destroy(string $shop_uuid, string $slug): JsonResponse
+    public function destroy(string $shop_uuid, string $id): JsonResponse
     {
         $shop = $this->getShopByUuid($shop_uuid);
         if (! $shop) {
@@ -109,7 +115,7 @@ class ServicesRepository implements ServicesInterface
         }
 
         $service = Service::where('shop_id', $shop->id)
-            ->where('slug', $slug)
+            ->where('id', $id)
             ->first();
 
         if (! $service) {
@@ -126,7 +132,7 @@ class ServicesRepository implements ServicesInterface
 
     public function clearServiceCache(Shop $shop): void
     {
-        (new ClearCache)->clear('services_page_', $shop);
+        (new ClearCache)->clear('services_page_', $shop->id);
     }
 
     private function getShopByUuid(string $uuid): ?Shop
