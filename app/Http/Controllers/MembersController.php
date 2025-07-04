@@ -4,7 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreMemberRequest;
 use App\Http\Requests\UpdateMemberRequest;
+use App\Http\Requests\UUIDPageRequest;
 use App\Repositories\MembersRepository;
+use Illuminate\Http\JsonResponse;
 
 class MembersController extends Controller
 {
@@ -15,9 +17,9 @@ class MembersController extends Controller
         $this->membersRepository = $membersRepository;
     }
 
-    public function index()
+    public function index(UUIDPageRequest $request): JsonResponse
     {
-        return $this->membersRepository->index();
+        return $this->membersRepository->index($request);
     }
 
     public function store(StoreMemberRequest $request)

@@ -4,21 +4,24 @@ namespace App\Interfaces;
 
 use App\Http\Requests\StoreMemberRequest;
 use App\Http\Requests\UpdateMemberRequest;
+use App\Http\Requests\UUIDPageRequest;
+use App\Models\Member;
 use App\Models\Shop;
+use Illuminate\Http\JsonResponse;
 
 interface MembersInterface
 {
-    public function index(string $shop_uuid);
+    public function index(UUIDPageRequest $request) : JsonResponse;
 
-    public function store(StoreMemberRequest $request);
+    public function store(StoreMemberRequest $request) : JsonResponse;
 
-    public function update(UpdateMemberRequest $request);
+    public function update(UpdateMemberRequest $request) : JsonResponse;
 
-    public function destroy(string $shop_uuid, int $id);
+    public function destroy(string $shop_uuid, int $id) : JsonResponse;
 
-    public function clearMemberCache(Shop $shop);
+    public function clearMemberCache(Shop $shop) : void;
 
-    public function getShopByUuid(string $shop_uuid);
+    public function getShopByUuid(string $shop_uuid) : Shop;
 
-    public function getMemberById(Shop $shop, int $id);
+    public function getMemberById(int $id) : Member;
 }

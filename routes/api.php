@@ -53,10 +53,6 @@ Route::prefix('client')->group(function () {
     //     Route::post('/', [QuoteController::class, 'store']);
     // });
 
-    Route::prefix('work-results')->group(function () {
-        Route::get('/', [WorkResultController::class, 'index']);
-    });
-
     Route::prefix('business-hours')->group(function () {
         Route::get('/', [BusinessHoursController::class, 'index']);
     });
@@ -97,13 +93,13 @@ Route::prefix('admin')
         Route::delete('/{uuid}', [ShopsController::class, 'destroy']);
     });
 
-    // Route::prefix('client-jobs')->group(function () {
-    //     Route::get('/', [ClientJobController::class, 'index']);
-    //     Route::get('/{slug}', [ClientJobController::class, 'show']);
-    //     Route::post('/', [ClientJobController::class, 'store']);
-    //     Route::post('/update', [ClientJobController::class, 'update']);
-    //     Route::delete('/{slug}', [ClientJobController::class, 'destroy']);
-    // });
+    Route::prefix('client-jobs')->group(function () {
+        Route::get('/', [ClientJobController::class, 'index']);
+        Route::get('/{slug}', [ClientJobController::class, 'show']);
+        Route::post('/', [ClientJobController::class, 'store']);
+        Route::post('/update', [ClientJobController::class, 'update']);
+        Route::delete('/{slug}', [ClientJobController::class, 'destroy']);
+    });
 
     Route::prefix('gallery')->group(function () {
         Route::get('/', [GalleriesController::class, 'index']);
@@ -129,12 +125,12 @@ Route::prefix('admin')
         Route::delete('/delete/{id}', [QuotesController::class, 'destroy']);
     });
 
-    // Route::prefix('members')->group(function () {
-    //     Route::get('/', [MembersController::class, 'index']);
-    //     Route::post('/', [MembersController::class, 'store']);
-    //     Route::post('/update', [MembersController::class, 'update']);
-    //     Route::delete('/{id}', [MembersController::class, 'destroy']);
-    // });
+    Route::prefix('members')->group(function () {
+        Route::get('/', [MembersController::class, 'index']);
+        Route::post('/', [MembersController::class, 'store']);
+        Route::post('/update', [MembersController::class, 'update']);
+        Route::delete('/{shop_uuid}/{id}', [MembersController::class, 'destroy']);
+    });
 
     // Route::prefix('work-results')->group(function () {
     //     Route::get('/', [WorkResultController::class, 'index']);

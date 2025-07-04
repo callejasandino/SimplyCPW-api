@@ -23,6 +23,7 @@ class UpdateClientJobRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'shop_uuid' => 'required|string|exists:shops,uuid',
             'uuid' => 'required|string|max:255',
             'title' => 'string|max:255|nullable',
             'client' => 'array|nullable',

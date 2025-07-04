@@ -21,8 +21,9 @@ class StoreClientJobRequest extends FormRequest
      * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
      */
     public function rules(): array
-    {
+    {   
         return [
+            'shop_uuid' => 'required|string|exists:shops,uuid',
             'title' => 'required|string|max:255',
             'client' => 'required',
             'date' => 'required|date',
